@@ -1,0 +1,11 @@
+
+TODO in Spec.: datalength == int, Unicode = little endian
+                IsArrayValue <-- length specifier
+ read derieved object types evt. 2 types: base and derieved ?
+ Windows codepage 1252 (latin) not available --> UTF8
+ 0x544D4201 hex (reversed byte order)
+ 4 byte checsum
+
+
+TODO in Code:
+- Max Array
