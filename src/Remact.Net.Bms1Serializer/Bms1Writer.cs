@@ -1,21 +1,22 @@
 ﻿namespace Remact.Net.Bms1Serializer
 {
     using System.IO;
+    using Remact.Net.Bms1Serializer.Internal;
 
     public class Bms1Writer
     {
         private BinaryWriter _stream;
 
-        private Bms1Attributes _attributes;
+        private Attributes _attributes;
 
-        private Bms1Tag _tag;
+        private TagReader _tag;
 
 
         public Bms1Writer(BinaryWriter streamWriter)
         {
             _stream = streamWriter;
-            _tag = new Bms1Tag();
-            _attributes = new Bms1Attributes();
+            _tag = new TagReader();
+            _attributes = new Attributes();
             EndOfMessage = true;
             EndOfBlock = true;
         }

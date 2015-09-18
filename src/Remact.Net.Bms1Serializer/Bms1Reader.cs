@@ -3,245 +3,66 @@
     using System;
     using System.IO;
     using System.Text;
+    using Remact.Net.Bms1Serializer.Internal;
 
-    public class Bms1Reader
+    public class Bms1Reader : IBms1Reader
     {
         private BinaryReader _stream;
-
-        private Bms1Attributes _attributes;
-
-        private Bms1Tag _tag;
-        
-        private int _nestedBlocks;
-
+        private IBms1MessageReader _messageReader;
         // private Encoding _asciiEncoding;// ASCII Encoding not available in PortableFramework
 
+        public  IBms1InternalReader Internal {get; private set;}
 
-        public Bms1Reader(BinaryReader streamReader)
+
+        public Bms1Reader(BinaryReader binaryReader)
         {
-            _stream = streamReader;
-            _tag = new Bms1Tag();
-            _attributes = new Bms1Attributes();
-            EndOfMessage = true;
-            EndOfBlock = true;
+            _stream = binaryReader;
+            var temp = new InternalReader(binaryReader);
+            Internal = temp;
+            _messageReader = temp;
         }
 
-        public bool EndOfMessage { get; private set; } // before message start or after message end
-        public bool EndOfBlock { get; private set; } // before block start or after block end
-
-
-        // returns false, when EndOfBlock or EndOfMessage == true after reading next tag
-        private bool ReadNextTag()
-        {
-            while (true)
-            {
-                _attributes.Clear();
-                _attributes.ReadUntilNextValueOrFrameTag(_stream, _tag);
-
-                if (!IsSupported(_tag.Type))
-                {
-                    _tag.SkipData(_stream);
-                    continue; // try if next tag is known
-                }
-
-                // known tag and its attributes read, data is available for read
-                if (_tag.Type == Tag.MessageFooter || _tag.Type == Tag.MessageEnd)
-                {
-                    if (_nestedBlocks != 0)
-                    {
-                        _nestedBlocks = 0;
-                        throw new Bms1Exception("wrong block nesting at end of message: " + _nestedBlocks);
-                    }
-                    EndOfMessage = true;
-                    EndOfBlock = true;
-                }
-
-                if (!EndOfMessage)
-                {
-                    if (_tag.Type == Tag.BlockStart)
-                    {
-                        EndOfBlock = false;
-                        _nestedBlocks++;
-                    }
-
-                    if (_tag.Type == Tag.BlockEnd)
-                    {
-                        EndOfBlock = true;
-                        _nestedBlocks--;
-                    }
-                }
-
-                return !EndOfMessage && !EndOfBlock;
-            }
-        }
-
-        private bool IsSupported(Tag tagType)
-        {
-            if (_attributes.TagSetNumber != 0)
-            {
-                return false;
-            }
-
-            switch (tagType)
-            {
-                case Tag.BoolFalse:
-                case Tag.BoolTrue:
-                case Tag.UByte:
-                case Tag.SInt: // TODO arrays
-                case Tag.String:
-
-                case Tag.MessageStart:
-                case Tag.MessageFooter:
-                case Tag.MessageEnd:
-                case Tag.BlockStart:
-                case Tag.BlockEnd:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
+        
         // returns next message block type
-        public int ReadMessageStart(out Bms1Attributes messageAttributes)
+        public int ReadMessageStart()
         {
-            while (true)
-            {
-                try
-                {
-                    EndOfMessage = true;
-                    EndOfBlock = true;
-                    _nestedBlocks = 0;
-                    if (_tag.Type != Tag.MessageStart)
-                    {
-                        ReadNextTag();
-                    }
-                    
-                    if (_tag.Type == Tag.MessageStart)
-                    {
-                        if (ReadNextTag() && _tag.Type == Tag.BlockStart)
-                        {
-                            messageAttributes = _attributes;
-                            return _tag.BlockTypeId; // valid message- and block start
-                        }
-                    }
-                    // not a valid message- and block start found
-                    _tag.SkipData(_stream);
-                }
-                catch (Bms1Exception ex)
-                {
-                    // Invalid data or resynchronizing
-                }
-            }// while
+            return _messageReader.ReadMessageStart();
         }
 
         // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        public bool ReadMessage(ref IBms1Block message)
+        public bool ReadMessage(IBms1Dto messageDto)
         {
-            if (EndOfMessage || EndOfBlock)
-            {
-                throw new Bms1Exception("not ready for message");
-            }
-
-            var ok = ReadBlock(message);
-            
-            while (_tag.Type != Tag.MessageEnd && _tag.Type != Tag.MessageStart)
-            {
-                // unknown blocks or values at end of message or resynchronization
-                ReadNextTag();
-                _tag.SkipData(_stream);
-            }
-            return ok;
+            return _messageReader.ReadMessage(() => messageDto.Bms1Read(this, Internal.BlockTypeId));
         }
 
         // returns next block type
-        public int ReadBlockStart(out Bms1Attributes messageAttributes)
+        public int ReadBlockStart()
         {
-            if (EndOfMessage || !ReadNextTag() || _tag.Type != Tag.BlockStart)
-            {
-                throw new Bms1Exception("wrong block start");
-            }
-            
-            messageAttributes = _attributes;
-            return _tag.BlockTypeId;
+            return _messageReader.ReadBlockStart();
         }
         
         // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        public bool ReadBlock(IBms1Block blockDto)
+        public bool ReadBlock(IBms1Dto blockDto)
         {
-            if (EndOfMessage)
-            {
-                return false;
-            }
-            
-            if (_tag.Type != Tag.BlockStart)
-            {
-                ReadNextTag();
-            }
-            
-            if (EndOfBlock || _tag.Type != Tag.BlockStart)
-            {
-                throw new Bms1Exception("wrong block start");
-            }
-            
-            var thisBlockLevel = _nestedBlocks;
-            
-            bool ok = true;
-            try
-            {
-                blockDto.Bms1Read (this, _tag.BlockTypeId, _attributes);
-                
-                if (_nestedBlocks != thisBlockLevel)
-                {
-                    _nestedBlocks = 0;
-                    throw new Bms1Exception("wrong block nesting = " + _nestedBlocks + " at end of block level: " + thisBlockLevel);
-                }
-            }
-            catch (Bms1Exception ex)
-            {
-                ok = false;
-            }
-            
-            while (!BlockFinished (thisBlockLevel))
-            {
-                // skip unknown blocks or values at end of block or resynchronization
-                ReadNextTag();
-                _tag.SkipData(_stream);
-            }
-            
-            if (_nestedBlocks != thisBlockLevel - 1)
-            {
-                _nestedBlocks = 0;
-                throw new Bms1Exception("wrong block nesting = " + _nestedBlocks + " at after block level: " + thisBlockLevel);
-            }
-            return ok;
+            return _messageReader.ReadBlock(() => blockDto.Bms1Read(this, Internal.BlockTypeId));
         }
         
-        private bool BlockFinished(int blockLevel)
-        {
-            if (_tag.Type == Tag.MessageEnd || _tag.Type == Tag.MessageStart)
-            {
-                return true;
-            }
-            return _nestedBlocks <= blockLevel && (_tag.Type == Tag.BlockEnd || _tag.Type == Tag.BlockStart);
-        }
-
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadBool(ref bool data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.DataLength == 0 && !_tag.IsArrayValue)
+            if (Internal.DataLength == 0 && !Internal.IsArrayData)
             {
-                if (_tag.Type == Tag.BoolFalse)
+                if (Internal.TypeTag == Bms1Tag.BoolFalse)
                 {
                     data = false;
                     return true;
                 }
-                else if (_tag.Type == Tag.BoolTrue)
+                else if (Internal.TypeTag == Bms1Tag.BoolTrue)
                 {
                     data = true;
                     return true;
@@ -253,19 +74,19 @@
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadByte(ref byte data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.Type == Tag.UByte && !_tag.IsArrayValue)
+            if (Internal.TypeTag == Bms1Tag.UByte && !Internal.IsArrayData)
             {
-                if (_tag.DataLength == 0)
+                if (Internal.DataLength == 0)
                 {
                     data = 0;
                     return true;
                 }
-                else if (_tag.DataLength == 1)
+                else if (Internal.DataLength == 1)
                 {
                     data = _stream.ReadByte();
                     return true;
@@ -277,14 +98,14 @@
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadByteArray(ref byte[] data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.Type == Tag.UByte && _tag.IsArrayValue)
+            if (Internal.TypeTag == Bms1Tag.UByte && Internal.IsArrayData)
             {
-                data = _stream.ReadBytes(_tag.DataLength);
+                data = _stream.ReadBytes(Internal.DataLength);
                 return true;
             }
             throw new Bms1Exception("cannot read byte array");
@@ -293,14 +114,14 @@
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadInt(ref int data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.Type == Tag.SInt && !_tag.IsArrayValue)
+            if (Internal.TypeTag == Bms1Tag.SInt && !Internal.IsArrayData)
             {
-                switch (_tag.DataLength)
+                switch (Internal.DataLength)
                 {
                     case 0: data = 0; return true;
                     case 1: data = _stream.ReadSByte(); return true;
@@ -314,28 +135,28 @@
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadString(ref string data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.Type == Tag.String && _tag.IsArrayValue)
+            if (Internal.TypeTag == Bms1Tag.String && Internal.IsArrayData)
             {
-                data = _tag.ReadDataString(_stream);
+                data = Internal.ReadDataString();
                 return true;
             }
 
-            if (_tag.Type == Tag.UByte && _tag.IsArrayValue && _attributes.IsSet(Bms1Attr.CharacterType))
+            if (Internal.TypeTag == Bms1Tag.UByte && Internal.IsArrayData && Internal.IsCharacterType)
             {
-                var buffer = _stream.ReadBytes(_tag.DataLength);
+                var buffer = _stream.ReadBytes(Internal.DataLength);
                 //data = _asciiEncoding.GetString(buffer, 0, buffer.Length);
                 data = Encoding.UTF8.GetString(buffer, 0, buffer.Length); // fallback to UTF8 because ASCII is not available in portable framework.
                 return true;
             }
 
-            if (_tag.Type == Tag.UShort && _tag.IsArrayValue && _attributes.IsSet(Bms1Attr.CharacterType))
+            if (Internal.TypeTag == Bms1Tag.UShort && Internal.IsArrayData && Internal.IsCharacterType)
             {
-                var buffer = _stream.ReadBytes(_tag.DataLength);
+                var buffer = _stream.ReadBytes(Internal.DataLength);
                 data = Encoding.Unicode.GetString(buffer, 0, buffer.Length);
                 return true;
             }
@@ -346,22 +167,22 @@
         // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadChar(ref char data)
         {
-            if (EndOfMessage || EndOfBlock || !ReadNextTag())
+            if (!Internal.ReadAttributes())
             {
                 return false;
             }
 
-            if (_tag.Type == Tag.String && !_tag.IsArrayValue)
+            if (Internal.TypeTag == Bms1Tag.String && !Internal.IsArrayData)
             {
                 return ConvertToChar(ref data);
             }
 
-            if (_tag.Type == Tag.UByte && !_tag.IsArrayValue && _attributes.IsSet(Bms1Attr.CharacterType))
+            if (Internal.TypeTag == Bms1Tag.UByte && !Internal.IsArrayData && Internal.IsCharacterType)
             {
                 return ConvertToChar(ref data);
             }
 
-            if (_tag.Type == Tag.UShort && !_tag.IsArrayValue && _attributes.IsSet(Bms1Attr.CharacterType))
+            if (Internal.TypeTag == Bms1Tag.UShort && !Internal.IsArrayData && Internal.IsCharacterType)
             {
                 return ConvertToChar(ref data);
             }
@@ -369,14 +190,14 @@
             throw new Bms1Exception("cannot read char");
         }
 
-        public bool ConvertToChar(ref char data)
+        private bool ConvertToChar(ref char data)
         {
-            if (_tag.DataLength == 0)
+            if (Internal.DataLength == 0)
             {
                 data = '\0';
                 return true;
             }
-            else if (_tag.DataLength == 0)
+            else if (Internal.DataLength == 0)
             {   // convert one ASCII byte to unicode char
                 //byte[] buffer = new byte[1];
                 //buffer[0] = _stream.ReadByte();
@@ -387,7 +208,7 @@
                 data = (char)b;
                 return true;
             }
-            else if  (_tag.DataLength == 2)
+            else if  (Internal.DataLength == 2)
             {
                 data = (char)_stream.ReadInt16();
             }
