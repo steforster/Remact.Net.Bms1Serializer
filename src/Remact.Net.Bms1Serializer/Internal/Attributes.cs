@@ -2,6 +2,7 @@
 {
     using System.IO;
     using System.Text;
+    using System.Collections.Generic;
 
 
     internal class Attributes
@@ -12,9 +13,9 @@
 
         public int CollectionElementCount;    // -1 = no collection
 
-        public string NameValue;    // TODO: list
+        public List<string> NameValue;
 
-        public string Namespace;    // TODO: list
+        public List<string> Namespace;
 
         public int TagSetNumber;    // only last attribute is used, no combinations supported
 
@@ -65,10 +66,20 @@
                         }
                         break;
 
-                    case 200: NameValue = tag.ReadDataString(stream);
+                    case 200:
+                        if (NameValue == null)
+                        {
+                            NameValue = new List<string>();
+                        }
+                        NameValue.Add(tag.ReadDataString(stream));
                         break;
 
-                    case 210: Namespace = tag.ReadDataString(stream);
+                    case 210:
+                        if (Namespace == null)
+                        {
+                            Namespace = new List<string>();
+                        }
+                        Namespace.Add(tag.ReadDataString(stream));
                         break;
 
                     default: tag.SkipData(stream);

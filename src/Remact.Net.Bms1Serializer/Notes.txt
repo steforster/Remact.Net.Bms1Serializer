@@ -10,4 +10,6 @@ TODO in Spec.: datalength == int, Unicode = little endian
 
 TODO in Code:
 - Max Array
-- Array / TagArray
+- API: Entkopplung von interner Representation. Zwingendes Überschreiben.
+       byte ReadByte() --> set EndOfBlock, exception when over EndOfBlock
+       byte? NullableReadByte()

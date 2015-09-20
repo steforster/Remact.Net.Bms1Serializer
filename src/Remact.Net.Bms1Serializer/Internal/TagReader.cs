@@ -13,6 +13,8 @@
     internal class TagReader
     {
         public Bms1Tag TypeTag;
+        
+        public int TagByte;
 
         public int AttributeTag; // = tag byte with last digit set to 0, when value >= 20.
 
@@ -38,20 +40,20 @@
             _lengthSpecifier = 0;
             AttributeTag = 0;
 
-            int tagByte = stream.ReadByte(); // 0..255
-            if (tagByte < 20)
+            TagByte = stream.ReadByte(); // 0..255
+            if (TagByte < 20)
             {
-                if      (tagByte == 10) TypeTag = Bms1Tag.BoolFalse;
-                else if (tagByte == 11) TypeTag = Bms1Tag.BoolTrue;
-                else if (tagByte == 12) TypeTag = Bms1Tag.Null;
+                if      (TagByte == 10) TypeTag = Bms1Tag.BoolFalse;
+                else if (TagByte == 11) TypeTag = Bms1Tag.BoolTrue;
+                else if (TagByte == 12) TypeTag = Bms1Tag.Null;
                 else
                 {
-                    AttributeTag = tagByte;
+                    AttributeTag = TagByte;
                 }
             }
-            else if (tagByte < 240)
+            else if (TagByte < 240)
             {
-                _lengthSpecifier = tagByte % 10; // 0..9
+                _lengthSpecifier = TagByte % 10; // 0..9
                 switch (_lengthSpecifier)
                 {
                     case 3:
@@ -85,15 +87,15 @@
                         break;
                 }
 
-                if (tagByte < 160)
+                if (TagByte < 160)
                 {
                     // Known value tags, DataLength is ready
-                    TypeTag = (Bms1Tag)(tagByte - _lengthSpecifier);
+                    TypeTag = (Bms1Tag)(TagByte - _lengthSpecifier);
                 }
                 else
                 {
                     // Known or unknown attribute- or value tag, DataLength is ready
-                    AttributeTag = (tagByte - _lengthSpecifier); // length specifier is set to 0 in AttributeTagType
+                    AttributeTag = (TagByte - _lengthSpecifier); // length specifier is set to 0 in AttributeTagType
                 }
             }
             else
@@ -101,7 +103,7 @@
                 BlockTypeId = -1;
                 Checksum = -1; 
                 // Known framing tag with specific data length
-                switch (tagByte)
+                switch (TagByte)
                 {
                     case 240: TypeTag = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
                     case 241: TypeTag = Bms1Tag.BaseBlockDefinition; BlockTypeId = stream.ReadUInt16(); break;
@@ -109,10 +111,10 @@
                     case 243: TypeTag = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
                     case 244: TypeTag = Bms1Tag.BlockEnd; break;
                     case 245: TypeTag = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
-                    case 246: TypeTag = Bms1Tag.Attribute; AttributeTag = tagByte; stream.ReadUInt32(); break;
-                    case 247: TypeTag = Bms1Tag.Attribute; AttributeTag = tagByte; stream.ReadUInt32(); break;
-                    case 248: TypeTag = Bms1Tag.Attribute; AttributeTag = tagByte; stream.ReadUInt32(); break;
-                    case 249: TypeTag = Bms1Tag.Attribute; AttributeTag = tagByte; stream.ReadUInt32(); break;
+                    case 246: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 247: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 248: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 249: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
                     case 251: TypeTag = Bms1Tag.MessageStart; break;
                     case 253: TypeTag = Bms1Tag.MessageFooter; break;
                     case 254: TypeTag = Bms1Tag.MessageEnd; break;
@@ -126,7 +128,7 @@
                         break;
 
                     default:
-                        throw new Bms1Exception("invalid framing tag = " + tagByte); // 252(version2) and 255
+                        throw new Bms1Exception("invalid framing tag = " + TagByte); // 252(version2) and 255
                 }
             }
         }

@@ -3,18 +3,18 @@
     using System;
     using System.IO;
     using System.Text;
+    using System.Collections.Generic;
 
-    internal class InternalReader : IBms1InternalReader, IBms1MessageReader
+    internal class InternalReader : IBms1InternalReader, IMessageReader
     {
         private BinaryReader _stream;
         private Attributes _attributes;
-        private TagReader _reader;
+        private TagReader _tagReader;
 
-        public InternalReader(BinaryReader streamReader)
+        public InternalReader()
         {
-            _stream = streamReader;
             _attributes = new Attributes();
-            _reader = new TagReader();
+            _tagReader = new TagReader();
         }
 
         // returns false, when EndOfBlock or EndOfMessage == true after reading next tag
@@ -24,43 +24,43 @@
             {
                 _attributes.Clear();
                 IsBlockType = false;
-                _attributes.ReadUntilNextValueOrFrameTag(_stream, _reader);
+                _attributes.ReadUntilNextValueOrFrameTag(_stream, _tagReader);
 
-                if (!IsSupported(_reader.TypeTag))
+                if (!IsSupported(_tagReader.TypeTag))
                 {
-                    _reader.SkipData(_stream);
+                    _tagReader.SkipData(_stream);
                     continue; // try if next tag is known
                 }
 
                 // known tag and its attributes read, data is available for read
-                if (_reader.TypeTag == Bms1Tag.MessageFooter || _reader.TypeTag == Bms1Tag.MessageEnd)
+                if (_tagReader.TypeTag == Bms1Tag.MessageFooter || _tagReader.TypeTag == Bms1Tag.MessageEnd)
                 {
+                    EndOfMessage = true;
+                    EndOfBlock = true;
                     if (BlockNestingLevel != 0)
                     {
                         BlockNestingLevel = 0;
                         throw new Bms1Exception("wrong block nesting at end of message: " + BlockNestingLevel);
                     }
-                    EndOfMessage = true;
-                    EndOfBlock = true;
                 }
 
                 if (!EndOfMessage)
                 {
-                    if (_reader.TypeTag == Bms1Tag.BlockStart)
+                    if (_tagReader.TypeTag == Bms1Tag.BlockStart)
                     {
                         EndOfBlock = false;
                         IsBlockType = true;
                         BlockNestingLevel++;
                     }
 
-                    if (_reader.TypeTag == Bms1Tag.BlockEnd)
+                    if (_tagReader.TypeTag == Bms1Tag.BlockEnd)
                     {
                         EndOfBlock = true;
                         BlockNestingLevel--;
                     }
                 }
 
-                return !EndOfMessage && !EndOfBlock;
+                return !EndOfBlock;
             }
         }
 
@@ -91,91 +91,78 @@
             }
         }
 
+        #region IBms1MessageReader Members
+        
         // returns next message block type
-        public int ReadMessageStart()
+        public int ReadMessageStart(BinaryReader binaryReader)
         {
+            _stream = binaryReader;
             while (true)
             {
-                try
-                {
+//                try
+//                {
                     EndOfMessage = true;
                     EndOfBlock = true;
                     BlockNestingLevel = 0;
-                    if (_reader.TypeTag != Bms1Tag.MessageStart)
+                    if (_tagReader.TypeTag != Bms1Tag.MessageStart)
                     {
                         ReadNextTag();
                     }
 
-                    if (_reader.TypeTag == Bms1Tag.MessageStart)
+                    if (_tagReader.TypeTag == Bms1Tag.MessageStart)
                     {
-                        if (ReadNextTag() && _reader.TypeTag == Bms1Tag.BlockStart)
+                        if (ReadNextTag() && _tagReader.TypeTag == Bms1Tag.BlockStart)
                         {
-                            return _reader.BlockTypeId; // valid message- and block start
+                            return _tagReader.BlockTypeId; // valid message- and block start
                         }
                     }
                     // not a valid message- and block start found
-                    _reader.SkipData(_stream);
-                }
-                catch (Bms1Exception ex)
-                {
-                    // Invalid data or resynchronizing
-                }
+                    _tagReader.SkipData(_stream);
+//                }
+//                catch (Bms1Exception ex)
+//                {
+//                    // Invalid data or resynchronizing
+//                }
             }// while
         }
 
         // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
         public bool ReadMessage(Action dtoAction)
         {
-            if (EndOfMessage || EndOfBlock)
+            if (EndOfBlock || _tagReader.TypeTag != Bms1Tag.BlockStart || BlockNestingLevel != 1)
             {
                 throw new Bms1Exception("not ready for message");
             }
 
             var ok = ReadBlock(dtoAction);
 
-            while (_reader.TypeTag != Bms1Tag.MessageEnd && _reader.TypeTag != Bms1Tag.MessageStart)
+            while (_tagReader.TypeTag != Bms1Tag.MessageEnd && _tagReader.TypeTag != Bms1Tag.MessageStart)
             {
                 // unknown blocks or values at end of message or resynchronization
                 ReadNextTag();
-                _reader.SkipData(_stream);
+                _tagReader.SkipData(_stream);
             }
             return ok;
         }
 
-        // returns next block type
-        public int ReadBlockStart()
-        {
-            if (EndOfMessage || !ReadNextTag() || _reader.TypeTag != Bms1Tag.BlockStart)
-            {
-                throw new Bms1Exception("wrong block start");
-            }
-            
-            return _reader.BlockTypeId;
-        }
-        
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
+        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
         public bool ReadBlock(Action dtoAction)
         {
-            if (EndOfMessage)
+            if (EndOfBlock)
             {
                 return false;
             }
 
-            if (_reader.TypeTag != Bms1Tag.BlockStart)
-            {
-                ReadNextTag();
-            }
-
-            if (EndOfBlock || _reader.TypeTag != Bms1Tag.BlockStart)
-            {
-                throw new Bms1Exception("wrong block start");
-            }
-
             var thisBlockLevel = BlockNestingLevel;
-            
+            Bms1Exception exception = null;
             bool ok = true;
             try
             {
+                if (_tagReader.TypeTag != Bms1Tag.BlockStart)
+                {
+                    throw new Bms1Exception("wrong block start");
+                }
+                
                 dtoAction(); // call the user code to deserialize the data transfer object
 
                 if (BlockNestingLevel != thisBlockLevel)
@@ -186,55 +173,57 @@
             }
             catch (Bms1Exception ex)
             {
-                ok = false;
+                exception = ex;
             }
             
             while (!BlockFinished (thisBlockLevel))
             {
-                // skip unknown blocks or values at end of block or resynchronization
+                // skip unknown blocks or values at end of block or resynchronize
                 ReadNextTag();
-                _reader.SkipData(_stream);
+                _tagReader.SkipData(_stream);
             }
 
             if (BlockNestingLevel != thisBlockLevel - 1)
             {
                 BlockNestingLevel = 0;
-                throw new Bms1Exception("wrong block nesting = " + BlockNestingLevel + " at after block level: " + thisBlockLevel);
+                throw new Bms1Exception("wrong block nesting = " + BlockNestingLevel + " after block level: " + thisBlockLevel, exception);
+            }
+            
+            if (_tagReader.TypeTag != Bms1Tag.BlockEnd)
+            {
+                throw new Bms1Exception("no correct block end after block level: " + thisBlockLevel, exception);
+            }
+            ReadNextTag(); // get attributes of next value
+            
+            if (exception != null)
+            {
+                throw new Bms1Exception ("cannot read block level: " + thisBlockLevel, exception);
             }
             return ok;
         }
         
         private bool BlockFinished(int blockLevel)
         {
-            if (_reader.TypeTag == Bms1Tag.MessageEnd || _reader.TypeTag == Bms1Tag.MessageStart)
+            if (_tagReader.TypeTag == Bms1Tag.MessageEnd || _tagReader.TypeTag == Bms1Tag.MessageStart)
             {
                 return true;
             }
-            return BlockNestingLevel <= blockLevel && (_reader.TypeTag == Bms1Tag.BlockEnd || _reader.TypeTag == Bms1Tag.BlockStart);
+            return BlockNestingLevel <= blockLevel && (_tagReader.TypeTag == Bms1Tag.BlockEnd || _tagReader.TypeTag == Bms1Tag.BlockStart);
         }
 
-        #region IBms1ObjectReader Members
 
-        public Bms1Tag TypeTag
+        #endregion
+        #region IBms1InternalReader Members
+        
+
+        public void ReadAttributes()
         {
-            get { return _reader.TypeTag; }
+            if (!EndOfBlock)
+            {
+                ReadNextTag();
+            }
         }
-
-        public string ObjectType
-        {
-            get { return _attributes.ObjectType; }
-        }
-
-        public int BlockTypeId
-        {
-            get { return _reader.BlockTypeId; }
-        }
-
-        public string ObjectName
-        {
-            get { return _attributes.ObjectName; }
-        }
-
+        
         public bool IsCollection
         {
             get { return _attributes.CollectionElementCount >= 0; }
@@ -243,6 +232,11 @@
         public int CollectionElementCount
         {
             get { return _attributes.CollectionElementCount; }
+        }
+
+        public Bms1Tag TypeTag
+        {
+            get { return _tagReader.TypeTag; }
         }
 
         public bool IsCharacterType
@@ -255,19 +249,34 @@
             get; private set;
         }
 
+        public int BlockTypeId
+        {
+            get { return IsBlockType ? _tagReader.BlockTypeId : -1; }
+        }
+
         public int BlockNestingLevel
         {
             get; private set;
         }
 
-        public System.Collections.IList NameValueAttributes
+        public string ObjectType
         {
-            get { throw new NotImplementedException(); }
+            get { return _attributes.ObjectType; }
+        }
+        
+        public string ObjectName
+        {
+            get { return _attributes.ObjectName; }
         }
 
-        public System.Collections.IList NamespaceAttributes
+        public List<string> NameValueAttributes
         {
-            get { throw new NotImplementedException(); }
+            get { return _attributes.NameValue; }
+        }
+
+        public List<string> NamespaceAttributes
+        {
+            get { return _attributes.Namespace; }
         }
 
         public bool EndOfMessage
@@ -280,36 +289,46 @@
             get; private set;
         }
 
-        public bool ReadAttributes()
-        {
-            return !EndOfMessage && !EndOfBlock && ReadNextTag();
-        }
-
         public bool IsArrayData
         {
-            get { return _reader.IsArrayData; }
+            get { return _tagReader.IsArrayData; }
         }
 
         public int DataLength
         {
-            get { return _reader.DataLength; }
+            get { return _tagReader.DataLength; }
         }
 
         public void SkipData()
         {
-            _reader.SkipData(_stream);
+            _tagReader.SkipData(_stream);
         }
 
         public string ReadDataString()
         {
-            return _reader.ReadDataString(_stream);
+            return _tagReader.ReadDataString(_stream);
         }
 
         public uint ReadDataUInt()
         {
-            return _reader.ReadDataUInt(_stream);
+            return _tagReader.ReadDataUInt(_stream);
         }
 
+        public bool ThrowError(string message)
+        {
+            var s = string.Empty;
+            if (_attributes.CollectionElementCount >= 0)
+            {
+                s = "collection["+_attributes.CollectionElementCount+"]";
+            }
+            if (_attributes.IsCharacterType)
+            {
+                s += ", char";
+            }
+            s = string.Format("{0}. Tag={1}, DataLength={2}, Attributes='{3}'", message, _tagReader.TagByte, _tagReader.DataLength, s);
+            throw new Bms1Exception(s);
+        }
+        
         #endregion
     }
 }

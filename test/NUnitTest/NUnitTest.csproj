@@ -1,14 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.0</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{658FF815-D635-497E-BA72-F6A9D22692CE}</ProjectGuid>
+    <ProjectGuid>{2E730C8E-AD52-4030-8360-0A1B90460748}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Remact.Net.Bms1Serializer</RootNamespace>
-    <AssemblyName>Remact.Net.Bms1Serializer</AssemblyName>
+    <RootNamespace>NUnitTest</RootNamespace>
+    <AssemblyName>NUnitTest</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,25 +30,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="nunit.framework">
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Internal\InternalReader.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Internal\TagReader.cs" />
-    <Compile Include="Internal\Attributes.cs" />
-    <Compile Include="Bms1Exception.cs" />
-    <Compile Include="IBms1Dto.cs" />
-    <Compile Include="IBms1Reader.cs" />
-    <Compile Include="Bms1MessageSerializer.cs" />
-    <Compile Include="Internal\Bms1Reader.cs" />
-    <Compile Include="Internal\Bms1Writer.cs" />
-    <Compile Include="IBms1Writer.cs" />
-    <Compile Include="Internal\InternalWriter.cs" />
-    <Compile Include="Internal\IBms1Internal.cs" />
-    <Compile Include="Internal\Bms1Tag.cs" />
+    <Compile Include="ReaderTest.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <None Include="Notes.txt" />
+    <ProjectReference Include="..\..\src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj">
+      <Project>{658FF815-D635-497E-BA72-F6A9D22692CE}</Project>
+      <Name>Remact.Net.Bms1Serializer</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

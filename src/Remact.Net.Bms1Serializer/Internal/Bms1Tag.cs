@@ -1,4 +1,4 @@
-﻿namespace Remact.Net.Bms1Serializer
+﻿namespace Remact.Net.Bms1Serializer.Internal
 {
     public enum Bms1Tag
     {
@@ -34,5 +34,18 @@
 
         // Any attribute or unknown value tag --> allowed to skip
         Attribute = 256
+    }
+    
+    public class Bms1LengthSpec
+    {
+        public const int ZeroTerminated = 5;
+        public const int Byte = 6;
+        public const int Int32 = 7;
+        public const int L0 = 0;
+        public const int L1 = 1;
+        public const int L2 = 2;
+        public const int L4 = 4;
+        public const int L8 = 8;
+        public const int L16 = 9;
     }
 }
