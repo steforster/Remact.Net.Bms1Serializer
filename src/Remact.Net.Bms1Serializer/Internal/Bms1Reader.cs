@@ -75,13 +75,13 @@
 
             if (Internal.DataLength == 0 && !Internal.IsArrayData)
             {
-                if (Internal.TypeTag == Bms1Tag.BoolFalse)
+                if (Internal.TagEnum == Bms1Tag.BoolFalse)
                 {
                     data = false;
                     Internal.ReadAttributes();
                     return true;
                 }
-                else if (Internal.TypeTag == Bms1Tag.BoolTrue)
+                else if (Internal.TagEnum == Bms1Tag.BoolTrue)
                 {
                     data = true;
                     Internal.ReadAttributes();
@@ -99,7 +99,7 @@
                 return false;
             }
 
-            if (Internal.TypeTag == Bms1Tag.UByte && !Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.UByte && !Internal.IsArrayData)
             {
                 if (Internal.DataLength == 0)
                 {
@@ -125,7 +125,7 @@
                 return false;
             }
 
-            if (Internal.TypeTag == Bms1Tag.UByte && Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.UByte && Internal.IsArrayData)
             {
                 data = Stream.ReadBytes(Internal.DataLength);
                 Internal.ReadAttributes();
@@ -142,7 +142,7 @@
                 return false;
             }
 
-            if (Internal.TypeTag == Bms1Tag.SInt && !Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.SInt && !Internal.IsArrayData)
             {
                 switch (Internal.DataLength)
                 {
@@ -163,14 +163,14 @@
                 return false;
             }
 
-            if (Internal.TypeTag == Bms1Tag.String && Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.String && Internal.IsArrayData)
             {
                 data = Internal.ReadDataString();
                 Internal.ReadAttributes();
                 return true;
             }
 
-            if (Internal.TypeTag == Bms1Tag.UByte && Internal.IsArrayData && Internal.IsCharacterType)
+            if (Internal.TagEnum == Bms1Tag.UByte && Internal.IsArrayData && Internal.IsCharacterType)
             {
                 var buffer = Stream.ReadBytes(Internal.DataLength);
                 //data = _asciiEncoding.GetString(buffer, 0, buffer.Length);
@@ -179,7 +179,7 @@
                 return true;
             }
 
-            if (Internal.TypeTag == Bms1Tag.UShort && Internal.IsArrayData && Internal.IsCharacterType)
+            if (Internal.TagEnum == Bms1Tag.UShort && Internal.IsArrayData && Internal.IsCharacterType)
             {
                 var buffer = Stream.ReadBytes(Internal.DataLength);
                 data = Encoding.Unicode.GetString(buffer, 0, buffer.Length);
@@ -199,15 +199,15 @@
             }
             
             var ok = false;
-            if (Internal.TypeTag == Bms1Tag.String && !Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.String && !Internal.IsArrayData)
             {
                 ok = ConvertToChar(ref data);
             }
-            else if (Internal.TypeTag == Bms1Tag.UByte && !Internal.IsArrayData && Internal.IsCharacterType)
+            else if (Internal.TagEnum == Bms1Tag.UByte && !Internal.IsArrayData && Internal.IsCharacterType)
             {
                 ok = ConvertToChar(ref data);
             }
-            else if (Internal.TypeTag == Bms1Tag.UShort && !Internal.IsArrayData && Internal.IsCharacterType)
+            else if (Internal.TagEnum == Bms1Tag.UShort && !Internal.IsArrayData && Internal.IsCharacterType)
             {
                 ok = ConvertToChar(ref data);
             }

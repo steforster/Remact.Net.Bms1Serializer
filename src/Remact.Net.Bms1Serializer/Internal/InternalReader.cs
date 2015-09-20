@@ -7,7 +7,7 @@
 
     internal class InternalReader : IBms1InternalReader, IMessageReader
     {
-        private BinaryReader _stream;
+        internal BinaryReader Stream;
         private Attributes _attributes;
         private TagReader _tagReader;
 
@@ -24,16 +24,16 @@
             {
                 _attributes.Clear();
                 IsBlockType = false;
-                _attributes.ReadUntilNextValueOrFrameTag(_stream, _tagReader);
+                _attributes.ReadUntilNextValueOrFrameTag(Stream, _tagReader);
 
-                if (!IsSupported(_tagReader.TypeTag))
+                if (!IsSupported(_tagReader.TagEnum))
                 {
-                    _tagReader.SkipData(_stream);
+                    _tagReader.SkipData(Stream);
                     continue; // try if next tag is known
                 }
 
                 // known tag and its attributes read, data is available for read
-                if (_tagReader.TypeTag == Bms1Tag.MessageFooter || _tagReader.TypeTag == Bms1Tag.MessageEnd)
+                if (_tagReader.TagEnum == Bms1Tag.MessageFooter || _tagReader.TagEnum == Bms1Tag.MessageEnd)
                 {
                     EndOfMessage = true;
                     EndOfBlock = true;
@@ -46,14 +46,14 @@
 
                 if (!EndOfMessage)
                 {
-                    if (_tagReader.TypeTag == Bms1Tag.BlockStart)
+                    if (_tagReader.TagEnum == Bms1Tag.BlockStart)
                     {
                         EndOfBlock = false;
                         IsBlockType = true;
                         BlockNestingLevel++;
                     }
 
-                    if (_tagReader.TypeTag == Bms1Tag.BlockEnd)
+                    if (_tagReader.TagEnum == Bms1Tag.BlockEnd)
                     {
                         EndOfBlock = true;
                         BlockNestingLevel--;
@@ -96,7 +96,7 @@
         // returns next message block type
         public int ReadMessageStart(BinaryReader binaryReader)
         {
-            _stream = binaryReader;
+            Stream = binaryReader;
             while (true)
             {
 //                try
@@ -104,20 +104,20 @@
                     EndOfMessage = true;
                     EndOfBlock = true;
                     BlockNestingLevel = 0;
-                    if (_tagReader.TypeTag != Bms1Tag.MessageStart)
+                    if (_tagReader.TagEnum != Bms1Tag.MessageStart)
                     {
                         ReadNextTag();
                     }
 
-                    if (_tagReader.TypeTag == Bms1Tag.MessageStart)
+                    if (_tagReader.TagEnum == Bms1Tag.MessageStart)
                     {
-                        if (ReadNextTag() && _tagReader.TypeTag == Bms1Tag.BlockStart)
+                        if (ReadNextTag() && _tagReader.TagEnum == Bms1Tag.BlockStart)
                         {
                             return _tagReader.BlockTypeId; // valid message- and block start
                         }
                     }
                     // not a valid message- and block start found
-                    _tagReader.SkipData(_stream);
+                    _tagReader.SkipData(Stream);
 //                }
 //                catch (Bms1Exception ex)
 //                {
@@ -129,18 +129,18 @@
         // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
         public bool ReadMessage(Action dtoAction)
         {
-            if (EndOfBlock || _tagReader.TypeTag != Bms1Tag.BlockStart || BlockNestingLevel != 1)
+            if (EndOfBlock || _tagReader.TagEnum != Bms1Tag.BlockStart || BlockNestingLevel != 1)
             {
                 throw new Bms1Exception("not ready for message");
             }
 
             var ok = ReadBlock(dtoAction);
 
-            while (_tagReader.TypeTag != Bms1Tag.MessageEnd && _tagReader.TypeTag != Bms1Tag.MessageStart)
+            while (_tagReader.TagEnum != Bms1Tag.MessageEnd && _tagReader.TagEnum != Bms1Tag.MessageStart)
             {
                 // unknown blocks or values at end of message or resynchronization
                 ReadNextTag();
-                _tagReader.SkipData(_stream);
+                _tagReader.SkipData(Stream);
             }
             return ok;
         }
@@ -158,7 +158,7 @@
             bool ok = true;
             try
             {
-                if (_tagReader.TypeTag != Bms1Tag.BlockStart)
+                if (_tagReader.TagEnum != Bms1Tag.BlockStart)
                 {
                     throw new Bms1Exception("wrong block start");
                 }
@@ -180,7 +180,7 @@
             {
                 // skip unknown blocks or values at end of block or resynchronize
                 ReadNextTag();
-                _tagReader.SkipData(_stream);
+                _tagReader.SkipData(Stream);
             }
 
             if (BlockNestingLevel != thisBlockLevel - 1)
@@ -189,7 +189,7 @@
                 throw new Bms1Exception("wrong block nesting = " + BlockNestingLevel + " after block level: " + thisBlockLevel, exception);
             }
             
-            if (_tagReader.TypeTag != Bms1Tag.BlockEnd)
+            if (_tagReader.TagEnum != Bms1Tag.BlockEnd)
             {
                 throw new Bms1Exception("no correct block end after block level: " + thisBlockLevel, exception);
             }
@@ -204,11 +204,11 @@
         
         private bool BlockFinished(int blockLevel)
         {
-            if (_tagReader.TypeTag == Bms1Tag.MessageEnd || _tagReader.TypeTag == Bms1Tag.MessageStart)
+            if (_tagReader.TagEnum == Bms1Tag.MessageEnd || _tagReader.TagEnum == Bms1Tag.MessageStart)
             {
                 return true;
             }
-            return BlockNestingLevel <= blockLevel && (_tagReader.TypeTag == Bms1Tag.BlockEnd || _tagReader.TypeTag == Bms1Tag.BlockStart);
+            return BlockNestingLevel <= blockLevel && (_tagReader.TagEnum == Bms1Tag.BlockEnd || _tagReader.TagEnum == Bms1Tag.BlockStart);
         }
 
 
@@ -234,9 +234,9 @@
             get { return _attributes.CollectionElementCount; }
         }
 
-        public Bms1Tag TypeTag
+        public Bms1Tag TagEnum
         {
-            get { return _tagReader.TypeTag; }
+            get { return _tagReader.TagEnum; }
         }
 
         public bool IsCharacterType
@@ -301,17 +301,17 @@
 
         public void SkipData()
         {
-            _tagReader.SkipData(_stream);
+            _tagReader.SkipData(Stream);
         }
 
         public string ReadDataString()
         {
-            return _tagReader.ReadDataString(_stream);
+            return _tagReader.ReadDataString(Stream);
         }
 
         public uint ReadDataUInt()
         {
-            return _tagReader.ReadDataUInt(_stream);
+            return _tagReader.ReadDataUInt(Stream);
         }
 
         public bool ThrowError(string message)

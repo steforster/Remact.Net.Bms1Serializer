@@ -7,13 +7,13 @@
     public interface IBms1InternalReader
     {
         bool    EndOfBlock { get; } // before block start or after block end, also not EndOfMessage
-        bool    EndOfMessage { get; } // before message start or after message end
+        //bool    EndOfMessage { get; } // before message start or after message end
 
         // returns false, when EndOfBlock or EndOfMessage == true before or after reading next tag
         bool    IsCollection { get; } // attribute defines that a collection of elements of this type will follow. Each element has its own attributes and DataLength.
         int     CollectionElementCount { get; }  // -1 = no collection
 
-        Bms1Tag TypeTag { get; }
+        Bms1Tag TagEnum { get; }
         
         bool    IsCharacterType { get; }
         bool    IsBlockType { get; }
@@ -25,7 +25,7 @@
         List<string>   NameValueAttributes { get; }
         List<string>   NamespaceAttributes { get; }
 
-        int     DataLength { get; } // length of following data in bytes, -1 = zero terminated
+        int     DataLength { get; } // length of following data in bytes, -1 = zero terminated, 0 = zero or empty array
         bool    IsArrayData { get; } // data is e.g. an array of bytes
 
         void    ReadAttributes(); // when not end of block or end of message, reads attributes for next value
@@ -56,9 +56,6 @@
     public interface IBms1InternalWriter
     {
         int     CollectionElementCount { set; }  // -1 = no collection
-
-        Bms1Tag TypeTag { set; }
-        
         bool    IsCharacterType { set; }
         int     BlockTypeId  { set; } // -1 = no id
 
@@ -67,11 +64,12 @@
         List<string>   NameValueAttributes { set; }
         List<string>   NamespaceAttributes { set; }
 
-        int     DataLength { set; } // length of following data in bytes, -1 = zero terminated
-        bool    IsArrayData { set; } // data is e.g. an array of bytes
-
+        void    WriteDataLength(Bms1Tag tag, int dataLength); // -1 = zero terminated, writes one or 2 bytes data length
         void    WriteDataString(Bms1Tag tag, string data);
-        void    WriteDataUInt(uint data);
+        void    WriteDataUInt  (Bms1Tag tag, UInt32 data);
+        void    WriteDataUInt64(Bms1Tag tag, UInt64 data);
+        void    WriteDataSInt  (Bms1Tag tag, Int32  data);
+        void    WriteDataSInt64(Bms1Tag tag, Int64  data);
     }
 
 

@@ -46,6 +46,7 @@
     <Compile Include="Internal\InternalWriter.cs" />
     <Compile Include="Internal\IBms1Internal.cs" />
     <Compile Include="Internal\Bms1Tag.cs" />
+    <Compile Include="Internal\TestSerializer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

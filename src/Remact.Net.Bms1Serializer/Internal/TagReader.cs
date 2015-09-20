@@ -12,7 +12,7 @@
     /// </summary>
     internal class TagReader
     {
-        public Bms1Tag TypeTag;
+        public Bms1Tag TagEnum;
         
         public int TagByte;
 
@@ -34,7 +34,7 @@
 
         public void ReadTag(BinaryReader stream)
         {
-            TypeTag = Bms1Tag.Attribute; // attribute or unknown value tag
+            TagEnum = Bms1Tag.Attribute; // attribute or unknown value tag
             IsArrayData = false;
             DataLength = 0;
             _lengthSpecifier = 0;
@@ -43,9 +43,9 @@
             TagByte = stream.ReadByte(); // 0..255
             if (TagByte < 20)
             {
-                if      (TagByte == 10) TypeTag = Bms1Tag.BoolFalse;
-                else if (TagByte == 11) TypeTag = Bms1Tag.BoolTrue;
-                else if (TagByte == 12) TypeTag = Bms1Tag.Null;
+                if      (TagByte == 10) TagEnum = Bms1Tag.BoolFalse;
+                else if (TagByte == 11) TagEnum = Bms1Tag.BoolTrue;
+                else if (TagByte == 12) TagEnum = Bms1Tag.Null;
                 else
                 {
                     AttributeTag = TagByte;
@@ -90,7 +90,7 @@
                 if (TagByte < 160)
                 {
                     // Known value tags, DataLength is ready
-                    TypeTag = (Bms1Tag)(TagByte - _lengthSpecifier);
+                    TagEnum = (Bms1Tag)(TagByte - _lengthSpecifier);
                 }
                 else
                 {
@@ -105,21 +105,21 @@
                 // Known framing tag with specific data length
                 switch (TagByte)
                 {
-                    case 240: TypeTag = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
-                    case 241: TypeTag = Bms1Tag.BaseBlockDefinition; BlockTypeId = stream.ReadUInt16(); break;
-                    case 242: TypeTag = Bms1Tag.BlockStart; break;
-                    case 243: TypeTag = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
-                    case 244: TypeTag = Bms1Tag.BlockEnd; break;
-                    case 245: TypeTag = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
-                    case 246: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 247: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 248: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 249: TypeTag = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 251: TypeTag = Bms1Tag.MessageStart; break;
-                    case 253: TypeTag = Bms1Tag.MessageFooter; break;
-                    case 254: TypeTag = Bms1Tag.MessageEnd; break;
+                    case 240: TagEnum = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
+                    case 241: TagEnum = Bms1Tag.BaseBlockDefinition; BlockTypeId = stream.ReadUInt16(); break;
+                    case 242: TagEnum = Bms1Tag.BlockStart; break;
+                    case 243: TagEnum = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
+                    case 244: TagEnum = Bms1Tag.BlockEnd; break;
+                    case 245: TagEnum = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
+                    case 246: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 247: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 248: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 249: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
+                    case 251: TagEnum = Bms1Tag.MessageStart; break;
+                    case 253: TagEnum = Bms1Tag.MessageFooter; break;
+                    case 254: TagEnum = Bms1Tag.MessageEnd; break;
 
-                    case 250: TypeTag = Bms1Tag.MessageStart; 
+                    case 250: TagEnum = Bms1Tag.MessageStart; 
                         var pattern = stream.ReadUInt32();
                         if (pattern != 0x544D4201) // decimal data [01, 66, 77, 83]
                         {

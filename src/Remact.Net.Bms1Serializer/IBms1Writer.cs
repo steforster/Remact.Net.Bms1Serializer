@@ -17,13 +17,13 @@
         
         void WriteByte(byte data);
 
-//        void WriteByteArray(byte[] data);
-//        
-//        void WriteInt(int data);
-//        
-//        void WriteChar(char data);
-//        
-//        void WriteString(string data);
+        void WriteByteArray(byte[] data);
+        
+        void WriteInt(int data);
+        
+        void WriteUnicode(char data);
+        
+        void WriteString(string data);
 //        
 //        void WriteStrings(IList<string> data);
 //        

@@ -7,7 +7,7 @@
 
     internal class InternalWriter : IBms1InternalWriter, IMessageWriter
     {
-        private BinaryWriter _stream;
+        internal BinaryWriter Stream;
         
 
         public InternalWriter()
@@ -19,13 +19,13 @@
 
         public void WriteMessage(BinaryWriter binaryWriter, int blockTypeId, Action dtoAction)
         {
-            _stream = binaryWriter;
-            _stream.Write((byte)Bms1Tag.MessageStart);
-            _stream.Write((uint)0x544D4201);
+            Stream = binaryWriter;
+            Stream.Write((byte)Bms1Tag.MessageStart);
+            Stream.Write((uint)0x544D4201);
             
             WriteBlock(blockTypeId, dtoAction);
             
-            _stream.Write((byte)Bms1Tag.MessageEnd);
+            Stream.Write((byte)Bms1Tag.MessageEnd);
         }
 
 
@@ -34,17 +34,17 @@
             WriteAttributes();
             if (blockTypeId < 0)
             {
-                _stream.Write((byte)Bms1Tag.BlockStart);
+                Stream.Write((byte)Bms1Tag.BlockStart);
             }
             else
             {
-                _stream.Write((byte)(Bms1Tag.BlockStart + 1));
-                _stream.Write((UInt16)blockTypeId);
+                Stream.Write((byte)(Bms1Tag.BlockStart + 1));
+                Stream.Write((UInt16)blockTypeId);
             }
             
             dtoAction();
             
-            _stream.Write((byte)Bms1Tag.BlockEnd);
+            Stream.Write((byte)Bms1Tag.BlockEnd);
             ClearAttributes();
         }
 
@@ -62,13 +62,13 @@
         {
             if (IsCharacterType)
             {
-                _stream.Write((byte)16);
+                Stream.Write((byte)16);
             }
 
             if (CollectionElementCount >= 0)
             {
-                _stream.Write((byte)190);
-                _stream.Write(CollectionElementCount);
+                Stream.Write((byte)190);
+                Stream.Write(CollectionElementCount);
             }
         }
 
@@ -83,11 +83,6 @@
         
 
         public int CollectionElementCount
-        {
-            get; set;
-        }
-
-        public Bms1Tag TypeTag
         {
             get; set;
         }
@@ -122,41 +117,145 @@
             get; set;
         }
 
-        public bool IsArrayData
+        public void WriteDataLength(Bms1Tag tag, int dataLength)
         {
-            get; set;
+            if (dataLength < 0)
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.ZeroTerminated));
+            }
+            else if (dataLength <= 255)
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.Byte));
+                Stream.Write((byte)(dataLength));
+            }
+            else
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.Int32));
+                Stream.Write((Int32)(dataLength));
+            }
         }
-
-        public int DataLength
-        {
-            get; set;
-        }
-
+        
         public void WriteDataString(Bms1Tag tag, string data)
         {
             if (data.Length == 0)
             {
-                _stream.Write((byte)tag);
+                Stream.Write((byte)tag);
             }
             else
             {
                 byte[] buffer = Encoding.UTF8.GetBytes(data);
-                if (buffer.Length < 256)
-                {
-                    _stream.Write((byte)(tag + Bms1LengthSpec.Byte));
-                    _stream.Write((byte)buffer.Length);
-                }
-                else
-                {
-                    _stream.Write((byte)(tag + Bms1LengthSpec.Int32));
-                    _stream.Write((Int32)buffer.Length);
-                }
-                _stream.Write(buffer);
+                WriteDataLength(tag, buffer.Length);
+                Stream.Write(buffer);
             }
         }
 
-        public void WriteDataUInt(uint data)
+        public void WriteDataUInt(Bms1Tag tag, UInt32 data)
         {
+            if (data == 0)
+            {
+                Stream.Write((byte)tag);
+            }
+            else if (data <= 0xFF)
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.L1));
+                Stream.Write((byte)(data));
+            }
+            else if (data <= 0xFFFF)
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.L2));
+                Stream.Write((UInt16)(data));
+            }
+            else
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.L4));
+                Stream.Write(data);
+            }
+        }
+
+        public void WriteDataUInt64(Bms1Tag tag, UInt64 data)
+        {
+            if (data <= 0xFFFFFFFF)
+            {
+                WriteDataUInt(tag, (UInt32)data);
+            }
+            else
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.L8));
+                Stream.Write(data);
+            }
+        }
+
+        public void WriteDataSInt(Bms1Tag tag, Int32 data)
+        {
+            if (data == 0)
+            {
+                Stream.Write((byte)tag);
+            }
+            else if (data > 0)
+            {
+                // Positive, most significant bit must be zero
+                if (data < 0x80)
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L1));
+                    Stream.Write((SByte)(data));
+                }
+                else if (data < 0x8000)
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L2));
+                    Stream.Write((Int16)(data));
+                }
+                else
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L4));
+                    Stream.Write(data);
+                }
+            }
+            else
+            {   // Negative, most significant bit must be set
+                if (data >= -0x80)// > 0xFFFFFF70)
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L1));
+                    Stream.Write((SByte)(data));
+                }
+                else if (data >= -0x8000) // > 0xFFFF7000)
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L2));
+                    Stream.Write((Int16)(data));
+                }
+                else
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L4));
+                    Stream.Write(data);
+                }
+            }
+        }
+
+        public void WriteDataSInt64(Bms1Tag tag, Int64 data)
+        {
+            if (data >= 0)
+            {
+                if (data < 0x80000000)
+                {
+                    WriteDataSInt(tag, (Int32)data);
+                }
+                else
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L8));
+                    Stream.Write(data);
+                }
+            }
+            else
+            {
+                if (data >= -0x80000000)
+                {
+                    WriteDataSInt(tag, (Int32)data);
+                }
+                else
+                {
+                    Stream.Write((byte)(tag + Bms1LengthSpec.L8));
+                    Stream.Write(data);
+                }
+            }
         }
 
         #endregion

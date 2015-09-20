@@ -38,7 +38,7 @@
             while (true)
             {
                 tag.ReadTag(stream);
-                if (tag.TypeTag != Bms1Tag.Attribute)
+                if (tag.TagEnum != Bms1Tag.Attribute)
                 {
                     // known value- or framing tag found
                     return;
