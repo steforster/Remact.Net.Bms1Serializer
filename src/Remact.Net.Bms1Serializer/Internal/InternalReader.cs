@@ -26,13 +26,12 @@
                 IsBlockType = false;
                 _attributes.ReadUntilNextValueOrFrameTag(Stream, _tagReader);
 
-                if (!IsSupported(_tagReader.TagEnum))
+                if (_attributes.TagSetNumber != 0)
                 {
-                    _tagReader.SkipData(Stream);
-                    continue; // try if next tag is known
+                    _tagReader.TagEnum = Bms1Tag.UnknownValue;
                 }
 
-                // known tag and its attributes read, data is available for read
+                // block or value tag and its attributes read, data is available for read
                 if (_tagReader.TagEnum == Bms1Tag.MessageFooter || _tagReader.TagEnum == Bms1Tag.MessageEnd)
                 {
                     EndOfMessage = true;
@@ -64,32 +63,6 @@
             }
         }
 
-        private bool IsSupported(Bms1Tag tagType)
-        {
-            if (_attributes.TagSetNumber != 0)
-            {
-                return false;
-            }
-
-            switch (tagType)
-            {
-                case Bms1Tag.BoolFalse:
-                case Bms1Tag.BoolTrue:
-                case Bms1Tag.UByte:
-                case Bms1Tag.SInt: // TODO arrays
-                case Bms1Tag.String:
-
-                case Bms1Tag.MessageStart:
-                case Bms1Tag.MessageFooter:
-                case Bms1Tag.MessageEnd:
-                case Bms1Tag.BlockStart:
-                case Bms1Tag.BlockEnd:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
 
         #region IBms1MessageReader Members
         
@@ -316,17 +289,20 @@
 
         public bool ThrowError(string message)
         {
-            var s = string.Empty;
+            var attr = string.Empty;
             if (_attributes.CollectionElementCount >= 0)
             {
-                s = "collection["+_attributes.CollectionElementCount+"]";
+                attr = "Collection ["+_attributes.CollectionElementCount+"]";
+            }
+            if (_tagReader.IsArrayData) // attribute coded in the LengthSpecifier
+            {
+                attr += " Array of";
             }
             if (_attributes.IsCharacterType)
             {
-                s += ", char";
+                attr += " Char";
             }
-            s = string.Format("{0}. Tag={1}, DataLength={2}, Attributes='{3}'", message, _tagReader.TagByte, _tagReader.DataLength, s);
-            throw new Bms1Exception(s);
+            throw new Bms1Exception(string.Format("{0}. '{3}' TagByte={1}, DataLength={2}, ", message, attr, _tagReader.TagByte, _tagReader.DataLength));
         }
         
         #endregion

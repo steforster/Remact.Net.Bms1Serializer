@@ -1,9 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Remact.Net.Bms1Serializer", "src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj", "{658FF815-D635-497E-BA72-F6A9D22692CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NUnitTest", "test\NUnitTest\NUnitTest.csproj", "{2E730C8E-AD52-4030-8360-0A1B90460748}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bms1NUnitTest", "test\UnitTest\Bms1NUnitTest.csproj", "{2E730C8E-AD52-4030-8360-0A1B90460748}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,5 +22,8 @@ Global
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

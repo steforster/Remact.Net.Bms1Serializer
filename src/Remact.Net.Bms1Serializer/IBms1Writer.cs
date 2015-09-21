@@ -10,17 +10,30 @@
         
         
 //        void WriteBlock(IBms1Dto blockDto);
-//        
+
 //        void WriteBlocks(IList<IBms1Dto> data);
-//
-//        void WriteBool(bool data);
+
+        void WriteBool(bool data);
         
         void WriteByte(byte data);
-
         void WriteByteArray(byte[] data);
-        
+        void WriteByteArray(IEnumerable<Byte> data);
+
+        void WriteUInt16(UInt16 data);
+        void WriteUInt16Array(IEnumerable<UInt16> data);
+
+        void WriteUInt32(UInt32 data);
+        void WriteUInt32Array(IEnumerable<UInt32> data);
+
+        void WriteInt16(Int16 data);
+        void WriteInt16Array(IEnumerable<Int16> data);
+
         void WriteInt(int data);
-        
+        void WriteIntArray(IEnumerable<int> data);
+
+        void WriteInt64(Int64 data);
+        void WriteInt64Array(IEnumerable<Int64> data);
+
         void WriteUnicode(char data);
         
         void WriteString(string data);

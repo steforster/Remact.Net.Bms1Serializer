@@ -55,16 +55,16 @@
     
     public interface IBms1InternalWriter
     {
-        int     CollectionElementCount { set; }  // -1 = no collection
-        bool    IsCharacterType { set; }
-        int     BlockTypeId  { set; } // -1 = no id
+        int  CollectionElementCount { get; set; }  // -1 = no collection
+        bool IsCharacterType { get; set; }
+        int  BlockTypeId { get; set; } // -1 = no id
 
-        string  ObjectType { set; }    // null = no type
-        string  ObjectName { set; }    // null = no name
-        List<string>   NameValueAttributes { set; }
-        List<string>   NamespaceAttributes { set; }
+        string ObjectType { get; set; }    // null = no type
+        string ObjectName { get; set; }    // null = no name
+        List<string> NameValueAttributes { get; set; }
+        List<string> NamespaceAttributes { get; set; }
 
-        void    WriteDataLength(Bms1Tag tag, int dataLength); // -1 = zero terminated, writes one or 2 bytes data length
+        void    WriteDataLength(Bms1Tag tag, int dataLength); // >= 256: writes 2 bytes data length / >= 0: writes 1 byte data length / -1 = zero terminated / -2: no data length
         void    WriteDataString(Bms1Tag tag, string data);
         void    WriteDataUInt  (Bms1Tag tag, UInt32 data);
         void    WriteDataUInt64(Bms1Tag tag, UInt64 data);

@@ -35,7 +35,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ReaderTest.cs" />
+    <Compile Include="ValueStreamTest.cs" />
+    <Compile Include="..\..\src\Remact.Net.Bms1Serializer\Properties\AssemblyInfo.cs">
+      <Link>AssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="Bms1TestFrameworkDefinitions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

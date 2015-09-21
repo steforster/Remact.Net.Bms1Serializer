@@ -131,6 +131,14 @@
                 Internal.ReadAttributes();
                 return true;
             }
+
+            if (Internal.TagEnum == Bms1Tag.Null)
+            {
+                data = null;
+                Internal.ReadAttributes();
+                return true;
+            }
+
             return Internal.ThrowError("cannot read byte array");
         }
 
@@ -142,7 +150,7 @@
                 return false;
             }
 
-            if (Internal.TagEnum == Bms1Tag.SInt && !Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.SInt32 && !Internal.IsArrayData)
             {
                 switch (Internal.DataLength)
                 {
@@ -163,11 +171,20 @@
                 return false;
             }
 
-            if (Internal.TagEnum == Bms1Tag.String && Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.Char)
             {
-                data = Internal.ReadDataString();
-                Internal.ReadAttributes();
-                return true;
+                if (Internal.IsArrayData)
+                {
+                    data = Internal.ReadDataString();
+                    Internal.ReadAttributes();
+                    return true;
+                }
+                else if (Internal.DataLength == 0)
+                {
+                    data = string.Empty;
+                    Internal.ReadAttributes();
+                    return true;
+                }
             }
 
             if (Internal.TagEnum == Bms1Tag.UByte && Internal.IsArrayData && Internal.IsCharacterType)
@@ -179,10 +196,17 @@
                 return true;
             }
 
-            if (Internal.TagEnum == Bms1Tag.UShort && Internal.IsArrayData && Internal.IsCharacterType)
+            if (Internal.TagEnum == Bms1Tag.UInt16 && Internal.IsArrayData && Internal.IsCharacterType)
             {
                 var buffer = Stream.ReadBytes(Internal.DataLength);
                 data = Encoding.Unicode.GetString(buffer, 0, buffer.Length);
+                Internal.ReadAttributes();
+                return true;
+            }
+
+            if (Internal.TagEnum == Bms1Tag.Null)
+            {
+                data = null;
                 Internal.ReadAttributes();
                 return true;
             }
@@ -199,7 +223,7 @@
             }
             
             var ok = false;
-            if (Internal.TagEnum == Bms1Tag.String && !Internal.IsArrayData)
+            if (Internal.TagEnum == Bms1Tag.Char && !Internal.IsArrayData)
             {
                 ok = ConvertToChar(ref data);
             }
@@ -207,7 +231,7 @@
             {
                 ok = ConvertToChar(ref data);
             }
-            else if (Internal.TagEnum == Bms1Tag.UShort && !Internal.IsArrayData && Internal.IsCharacterType)
+            else if (Internal.TagEnum == Bms1Tag.UInt16 && !Internal.IsArrayData && Internal.IsCharacterType)
             {
                 ok = ConvertToChar(ref data);
             }
@@ -241,6 +265,7 @@
             else if  (Internal.DataLength == 2)
             {
                 data = (char)Stream.ReadInt16();
+                return true;
             }
             return false;
         }

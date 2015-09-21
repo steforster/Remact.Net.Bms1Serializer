@@ -5,8 +5,16 @@ TODO in Spec.: datalength == int, Unicode = little endian
  Windows codepage 1252 (latin) not available --> UTF8
  0x544D4201 hex (reversed byte order)
  4 byte checksum
+
  collection ersetzt array attribute
  - element = block or value
+
+ unknown attribute or value --> deside because reading must stop at value --> not allowed tag exception
+
+ bigEndian attribute on block --> Reader has to convert!
+
+ UInt16... anstelle UShort
+
 
 TODO in Code:
 - Max Array
