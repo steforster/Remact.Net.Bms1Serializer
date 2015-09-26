@@ -23,15 +23,16 @@
             Stream = binaryWriter;
             Stream.Write((byte)Bms1Tag.MessageStart);
             Stream.Write((uint)0x544D4201);
-            
-            WriteBlock(blockTypeId, dtoAction);
+
+            WriteBlock(binaryWriter, blockTypeId, dtoAction);
             
             Stream.Write((byte)Bms1Tag.MessageEnd);
         }
 
 
-        public void WriteBlock(int blockTypeId, Action dtoAction)
+        public void WriteBlock(BinaryWriter binaryWriter, int blockTypeId, Action dtoAction)
         {
+            Stream = binaryWriter;
             WriteAttributes();
             if (blockTypeId < 0)
             {
@@ -121,7 +122,13 @@
             get; set;
         }
 
-        public void WriteDataLength(Bms1Tag tag, int dataLength)
+        public void WriteAttributesAndTag(Bms1Tag tag)
+        {
+            WriteAttributes();
+            Stream.Write((byte)tag);
+        }
+
+        public void WriteAttributesAndTag(Bms1Tag tag, int dataLength)
         {
             WriteAttributes();
             if (dataLength >= 256)
@@ -134,13 +141,9 @@
                 Stream.Write((byte)(tag + Bms1LengthSpec.Byte));
                 Stream.Write((byte)(dataLength));
             }
-            else if (dataLength == -1)
-            {
-                Stream.Write((byte)(tag + Bms1LengthSpec.ZeroTerminated)); // -1 = zero termination
-            }
             else
             {
-                Stream.Write((byte)(tag)); // -2 = no data length, just attributes + tag
+                Stream.Write((byte)(tag + Bms1LengthSpec.ZeroTerminated)); // -1 = zero termination
             }
         }
         
@@ -158,7 +161,7 @@
             else
             {
                 byte[] buffer = Encoding.UTF8.GetBytes(data);
-                WriteDataLength(tag, buffer.Length);
+                WriteAttributesAndTag(tag, buffer.Length);
                 Stream.Write(buffer);
             }
         }

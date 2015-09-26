@@ -8,28 +8,31 @@
     {
         IBms1InternalReader Internal { get; }
         
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
+        // ??? returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
         bool ReadBlock(IBms1Dto blockDto);
         
         bool ReadBlocks(Func<IBms1InternalReader, IBms1Dto> blockFactory);
 
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadBool(ref bool data);
-        
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadByte(ref byte data);
+        // check Internal.EndOfBlock before calling Read... method.
+        bool ReadBool();
+        byte ReadByte();
+        UInt16 ReadUInt16();
+        UInt32 ReadUInt32();
+        Int16 ReadInt16();
+        Int32 ReadInt32();
+        Int64 ReadInt64();
 
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadByteArray(ref byte[] data);
-        
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadInt(ref int data);
-        
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadChar(ref char data);
-        
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        bool ReadString(ref string data);
+        Nullable<T> ReadNullable<T>() where T : struct;
+
+        byte[] ReadByteArray();
+        UInt16[] ReadUInt16Array();
+        UInt32[] ReadUInt32Array();
+        Int16[] ReadInt16Array();
+        Int32[] ReadInt32Array();
+        Int64[] ReadInt64Array();
+
+        char  ReadChar();
+        string ReadString();
         
 //        bool ReadStrings(ref IList<string> data);
 //        

@@ -7,7 +7,7 @@
 
     internal class InternalReader : IBms1InternalReader, IMessageReader
     {
-        internal BinaryReader Stream;
+        internal BinaryReader Stream; // set by TestSerializer for testing purpose.
         private Attributes _attributes;
         private TagReader _tagReader;
 
@@ -199,7 +199,7 @@
         
         public bool IsCollection
         {
-            get { return _attributes.CollectionElementCount >= 0; }
+            get { return _attributes.CollectionElementCount != -1; }
         }
 
         public int CollectionElementCount
@@ -210,6 +210,11 @@
         public Bms1Tag TagEnum
         {
             get { return _tagReader.TagEnum; }
+        }
+
+        public bool IsSingleValueOfType(Bms1Tag tag)
+        {
+            return !EndOfBlock && _tagReader.TagEnum == tag && !_tagReader.IsArrayData;
         }
 
         public bool IsCharacterType
@@ -287,22 +292,30 @@
             return _tagReader.ReadDataUInt(Stream);
         }
 
-        public bool ThrowError(string message)
+        public Bms1Exception Bms1Exception(string message)
         {
             var attr = string.Empty;
-            if (_attributes.CollectionElementCount >= 0)
+
+            if (EndOfBlock)
             {
-                attr = "Collection ["+_attributes.CollectionElementCount+"]";
+                attr += "EndOfBlock";
             }
-            if (_tagReader.IsArrayData) // attribute coded in the LengthSpecifier
+
+            if (IsCollection)
+            {
+                attr += " Collection ["+_attributes.CollectionElementCount+"]";
+            }
+
+            if (IsArrayData) // attribute coded in the LengthSpecifier
             {
                 attr += " Array of";
             }
-            if (_attributes.IsCharacterType)
+
+            if (IsCharacterType)
             {
                 attr += " Char";
             }
-            throw new Bms1Exception(string.Format("{0}. '{3}' TagByte={1}, DataLength={2}, ", message, attr, _tagReader.TagByte, _tagReader.DataLength));
+            return new Bms1Exception(string.Format("{0}. '{1}' TagByte={2}, DataLength={3}, ", message, attr, _tagReader.TagByte, _tagReader.DataLength));
         }
         
         #endregion

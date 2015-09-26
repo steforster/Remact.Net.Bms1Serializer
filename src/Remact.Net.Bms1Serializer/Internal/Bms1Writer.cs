@@ -24,24 +24,50 @@
 
         public void WriteNull()
         {
-            Internal.WriteDataLength(Bms1Tag.Null, -2); // writes attributes previously, does not modify the tag and writes no data length.
+            Internal.WriteAttributesAndTag(Bms1Tag.Null);
         }
 
+        //------------------------------
         public void WriteBool(bool data)
         {
             if (data)
             {
-                Internal.WriteDataLength(Bms1Tag.BoolTrue, -2); // writes attributes previously, does not modify the tag and writes no data length.
+                Internal.WriteAttributesAndTag(Bms1Tag.BoolTrue);
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.BoolFalse, -2);
+                Internal.WriteAttributesAndTag(Bms1Tag.BoolFalse);
             }
         }
 
+        public void WriteBool(bool? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                WriteBool(data.Value);
+            }
+        }
+
+        //------------------------------
         public void WriteByte(byte data)
         {
-            Internal.WriteDataUInt(Bms1Tag.UByte, data); // writes attributes previously
+            Internal.WriteDataUInt(Bms1Tag.Byte, data); // writes attributes previously
+        }
+
+        public void WriteByte(byte? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataUInt(Bms1Tag.Byte, data.Value);
+            }
         }
 
         public void WriteByteArray(byte[] data)
@@ -52,7 +78,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.UByte, data.Length); // writes attributes previously
+                Internal.WriteAttributesAndTag(Bms1Tag.Byte, data.Length);
                 Stream.Write(data);
             }
         }
@@ -65,7 +91,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.UByte, data.Count());
+                Internal.WriteAttributesAndTag(Bms1Tag.Byte, data.Count());
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -73,9 +99,22 @@
             }
         }
 
+        //------------------------------
         public void WriteUInt16(UInt16 data)
         {
             Internal.WriteDataUInt(Bms1Tag.UInt16, data);
+        }
+
+        public void WriteUInt16(UInt16? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataUInt(Bms1Tag.UInt16, data.Value);
+            }
         }
 
         public void WriteUInt16Array(IEnumerable<UInt16> data)
@@ -86,7 +125,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.UInt16, data.Count() * 2);
+                Internal.WriteAttributesAndTag(Bms1Tag.UInt16, data.Count() * 2);
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -94,9 +133,22 @@
             }
         }
 
+        //------------------------------
         public void WriteUInt32(UInt32 data)
         {
             Internal.WriteDataUInt(Bms1Tag.UInt32, data);
+        }
+
+        public void WriteUInt32(UInt32? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataUInt(Bms1Tag.UInt32, data.Value);
+            }
         }
 
         public void WriteUInt32Array(IEnumerable<UInt32> data)
@@ -107,7 +159,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.UInt32, data.Count() * 4);
+                Internal.WriteAttributesAndTag(Bms1Tag.UInt32, data.Count() * 4);
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -115,9 +167,22 @@
             }
         }
 
+        //------------------------------
         public void WriteInt16(Int16 data)
         {
-            Internal.WriteDataSInt(Bms1Tag.SInt16, data); // writes attributes previously
+            Internal.WriteDataSInt(Bms1Tag.Int16, data); // writes attributes previously
+        }
+
+        public void WriteInt16(Int16? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataSInt(Bms1Tag.Int16, data.Value);
+            }
         }
 
         public void WriteInt16Array(IEnumerable<Int16> data)
@@ -128,7 +193,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.SInt16, data.Count() * 2);
+                Internal.WriteAttributesAndTag(Bms1Tag.Int16, data.Count() * 2);
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -136,12 +201,25 @@
             }
         }
 
-        public void WriteInt(int data)
+        //------------------------------
+        public void WriteInt32(int data)
         {
-            Internal.WriteDataSInt(Bms1Tag.SInt32, data); // writes attributes previously
+            Internal.WriteDataSInt(Bms1Tag.Int32, data); // writes attributes previously
         }
 
-        public void WriteIntArray(IEnumerable<int> data)
+        public void WriteInt32(Int32? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataSInt(Bms1Tag.Int32, data.Value);
+            }
+        }
+
+        public void WriteInt32Array(IEnumerable<int> data)
         {
             if (data == null)
             {
@@ -149,7 +227,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.SInt32, data.Count() * 4);
+                Internal.WriteAttributesAndTag(Bms1Tag.Int32, data.Count() * 4);
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -157,10 +235,22 @@
             }
         }
 
-
+        //------------------------------
         public void WriteInt64(Int64 data)
         {
-            Internal.WriteDataSInt64(Bms1Tag.SInt64, data);
+            Internal.WriteDataSInt64(Bms1Tag.Int64, data);
+        }
+
+        public void WriteInt64(Int64? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.WriteDataSInt64(Bms1Tag.Int64, data.Value);
+            }
         }
 
         public void WriteInt64Array(IEnumerable<Int64> data)
@@ -171,7 +261,7 @@
             }
             else
             {
-                Internal.WriteDataLength(Bms1Tag.SInt64, data.Count() * 8);
+                Internal.WriteAttributesAndTag(Bms1Tag.Int64, data.Count() * 8);
                 foreach (var d in data)
                 {
                     Stream.Write(d);
@@ -179,16 +269,29 @@
             }
         }
 
+        //------------------------------
         public void WriteUnicode(char data)
         {
-            Internal.WriteDataLength(Bms1Tag.Char + Bms1LengthSpec.L2, -2); // writes attributes previously, does not modify the tag and writes no data length.
+            Internal.WriteAttributesAndTag(Bms1Tag.Char + Bms1LengthSpec.L2);
             Stream.Write((Int16)data);
         }
-        
+
+        public void WriteUnicode(char? data)
+        {
+            if (!data.HasValue)
+            {
+                WriteNull();
+            }
+            else
+            {
+                WriteUnicode(data.Value);
+            }
+        }
+
+        //------------------------------
         public void WriteString(string data)
         {
             Internal.WriteDataString(Bms1Tag.Char, data); // supports null
         }
-
     }
 }

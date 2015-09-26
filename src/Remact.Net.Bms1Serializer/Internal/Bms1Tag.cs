@@ -6,12 +6,12 @@
         BoolFalse = 10,
         BoolTrue = 11,
         Null = 12,
-        UByte = 20,  //  8 bit
-        UInt16 = 30,  // 16 bit
-        SInt16 = 40,
+        Byte = 20,  //  8 bit, unsigned
+        UInt16 = 30,  // 16 bit, unsigned
+        Int16 = 40,   // 16 bit, signed
         UInt32 = 50,  // 32 bit
-        SInt32 = 60,
-        SInt64 = 70,  // 64 bit
+        Int32 = 60,
+        Int64 = 70,  // 64 bit, signed
         Enum = 80,  //  8...64 bit
         Bitset = 90,  //  8..128 bit
         Decimal = 100, //128 bit

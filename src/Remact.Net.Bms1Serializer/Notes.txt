@@ -2,18 +2,23 @@
 TODO in Spec.: datalength == int, Unicode = little endian
                 IsArrayValue <-- length specifier
  read derieved object types evt. 2 types: base and derieved ?
+      see IBms1Reader.ReadBlocks
+
  Windows codepage 1252 (latin) not available --> UTF8
  0x544D4201 hex (reversed byte order)
  4 byte checksum
 
  collection ersetzt array attribute
  - element = block or value
+        int     CollectionElementCount { get; }  // -1 = no collection, -2 = collection until end of block (not a predefined length)
 
- unknown attribute or value --> deside because reading must stop at value --> not allowed tag exception
+ unknown attribute or value --> decide because reading must stop at value --> not allowed tag exception
 
- bigEndian attribute on block --> Reader has to convert!
+ 2 blockStart types (big/littleEndian) or bigEndian attribute on block --> Reader has to convert!
 
- UInt16... anstelle UShort
+ Naming UInt16... anstelle UShort
+
+ Naming+Concepts see BSON, ActionMessageFormat and others: https://en.wikipedia.org/wiki/Comparison_of_data_serialization_formats
 
 
 TODO in Code:
