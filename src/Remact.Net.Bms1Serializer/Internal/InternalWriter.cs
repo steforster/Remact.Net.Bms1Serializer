@@ -65,14 +65,13 @@
         {
             if (IsCharacterType)
             {
-                Stream.Write((byte)16);
+                Stream.Write((byte)Bms1Attribute.CharType);
                 IsCharacterType = false;
             }
 
             if (CollectionElementCount >= 0)
             {
-                Stream.Write((byte)190);
-                Stream.Write(CollectionElementCount);
+                WriteDataUInt((byte)Bms1Attribute.Collection, (UInt32)CollectionElementCount);
                 CollectionElementCount = -1;
             }
 
@@ -168,6 +167,11 @@
 
         public void WriteDataUInt(Bms1Tag tag, UInt32 data)
         {
+            WriteDataUInt((byte)tag, data);
+        }
+
+        private void WriteDataUInt(byte tag, UInt32 data)
+        {
             WriteAttributes();
             if (data == 0)
             {
@@ -194,7 +198,7 @@
         {
             if (data <= 0xFFFFFFFF)
             {
-                WriteDataUInt(tag, (UInt32)data);
+                WriteDataUInt((byte)tag, (UInt32)data);
             }
             else
             {

@@ -1,6 +1,7 @@
 ﻿namespace Remact.Net.Bms1Serializer.Internal
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Text;
 
@@ -468,6 +469,47 @@
                 }
             }
             throw Internal.Bms1Exception("cannot read Nullable<" + typeof(T).Name + ">");
+        }
+
+        public IList<string> ReadStrings()
+        {
+            if (!Internal.EndOfBlock)
+            {
+                if (Internal.TagEnum == Bms1Tag.BlockStart)
+                {
+                    List<string> data;
+                    var predefinedCount = Internal.CollectionElementCount;
+                    if (predefinedCount >= 0)
+                    {
+                        data = new List<string>(Internal.CollectionElementCount);
+                    }
+                    else
+                    {
+                        data = new List<string>();
+                    }
+
+                    Internal.ReadAttributes(); // skip blockstart
+                    while (!Internal.EndOfBlock)
+                    {
+                        data.Add(ReadString());
+                    }
+                    Internal.ReadAttributes(); // skip blockend
+
+                    if (predefinedCount >= 0 && data.Count != predefinedCount)
+                    {
+                        throw Internal.Bms1Exception("expected string list count = " + predefinedCount+", received = " + data.Count);
+                    }
+
+                    return data;
+                }
+
+                if (Internal.TagEnum == Bms1Tag.Null)
+                {
+                    Internal.ReadAttributes();
+                    return null;
+                }
+            }
+            throw Internal.Bms1Exception("cannot read string list");
         }
     }
 }

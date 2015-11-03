@@ -45,8 +45,7 @@
         void WriteUnicode(char? data);
 
         void WriteString(string data);
-        //        
-        //        void WriteStrings(IList<string> data);
+        void WriteStrings(IList<string> data);
         //        
         //        void WriteDate(DateTime data);
         //        void WriteTime(DateTime data);

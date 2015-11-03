@@ -1,8 +1,8 @@
 ﻿namespace Remact.Net.Bms1Serializer.Internal
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.InteropServices;
     using System.Text;
 
     /// <summary>
@@ -12,12 +12,16 @@
     /// </summary>
     internal class TagReader
     {
-        public Bms1Tag TagEnum;
+        private int _lengthSpecifier; // = last digit of tag byte: 0..7
+
+        private byte[] _byteBuffer;
+
         
+        // Tag info
         public int TagByte;
 
-        public int AttributeTag; // = tag byte with last digit set to 0, when value >= 20.
-
+        public Bms1Tag TagEnum;
+        
         public bool IsArrayData;  // DataLength(in bytes) contains an array of TagType
 
         public int DataLength; // -1 = zero terminated
@@ -26,100 +30,152 @@
 
         public int Checksum; // after BlockEnd, is -1 when no checksum available
 
+        
+        // Attributes collected for next value
+        public string ObjectName;   // null = no name
 
-        private int _lengthSpecifier; // = last digit of tag byte: 0..7
+        public string ObjectType;
 
-        private byte[] _byteBuffer;
+        public int CollectionElementCount;    // -1 = no collection
+
+        public int CollectionElementBaseType;    // -1 = no collection or no base type
+
+        public List<string> NameValue;
+
+        public List<string> Namespace;
+
+        public int TagSetNumber;    // only last attribute is used, no combinations supported
+
+        public bool IsCharacterType;
+
+        internal void ClearAttributes()
+        {
+            TagEnum = Bms1Tag.Attribute;
+            ObjectName = null;
+            ObjectType = null;
+            CollectionElementCount = -1;
+            CollectionElementBaseType = -1;
+            NameValue = null;
+            Namespace = null;
+            TagSetNumber = 0;
+            IsCharacterType = false;
+        }
 
 
         public void ReadTag(BinaryReader stream)
         {
-            TagEnum = Bms1Tag.Attribute; // attribute or unknown value tag
+            TagEnum = Bms1Tag.UnknownValue;
             IsArrayData = false;
             DataLength = 0;
             _lengthSpecifier = 0;
-            AttributeTag = 0;
 
             TagByte = stream.ReadByte(); // 0..255
-            if (TagByte < 20)
+            if (TagByte < 10)
             {
-                if      (TagByte == 10) TagEnum = Bms1Tag.BoolFalse;
-                else if (TagByte == 11) TagEnum = Bms1Tag.BoolTrue;
-                else if (TagByte == 12) TagEnum = Bms1Tag.Null;
-                else
+                if (TagByte == 0)
                 {
-                    AttributeTag = TagByte;
+                    throw new Bms1Exception("invalid value tag 0");
+                }
+                else if (TagByte == 7) TagEnum = Bms1Tag.Null;
+                else if (TagByte == 8) TagEnum = Bms1Tag.BoolFalse;
+                else if (TagByte == 9) TagEnum = Bms1Tag.BoolTrue;
+            }
+            else if (TagByte < 170) // Values
+            {
+                EvaluateDataLength(stream);
+                if (DataLength == -3)
+                {
+                    throw new Bms1Exception("unknown data length specifier 3");
+                }
+
+                if (TagByte < 150)
+                {
+                    // Known value tags
+                    TagEnum = (Bms1Tag)(TagByte - _lengthSpecifier);
                 }
             }
-            else if (TagByte < 240)
+            else if (TagByte < 245) // Attributes --> skip unused data
             {
-                _lengthSpecifier = TagByte % 10; // 0..9
-                switch (_lengthSpecifier)
+                EvaluateDataLength(stream);
+
+                TagEnum = Bms1Tag.Attribute;
+                var attributeGroup = TagByte;
+                if (TagByte < 240)
                 {
-                    case 3:
-                        throw new Bms1Exception("unknown data length specifier 3");
+                    attributeGroup -= _lengthSpecifier;
+                }
 
-                    case 5:
-                        IsArrayData = true;
-                        DataLength = -1; // zero terminated string
+                switch (attributeGroup)
+                {
+                    case 170:
+                        ObjectName = ReadDataString(stream);
                         break;
 
-                    case 6:
-                        IsArrayData = true;
-                        DataLength = stream.ReadByte();
+                    case 180:
+                        ObjectType = ReadDataString(stream);
                         break;
 
-                    case 7: 
-                        IsArrayData = true;
-                        DataLength = stream.ReadInt32();
-                        if (DataLength < 0)
+                    case 190:
+                        if (NameValue == null)
                         {
-                            throw new Bms1Exception("unknown data length = " + DataLength);
+                            NameValue = new List<string>();
+                        }
+                        NameValue.Add(ReadDataString(stream));
+                        break;
+
+                    case 200:
+                        if (Namespace == null)
+                        {
+                            Namespace = new List<string>();
+                        }
+                        Namespace.Add(ReadDataString(stream));
+                        break;
+
+                    case 230:
+                        {
+                            if (DataLength == 0)
+                            {
+                                CollectionElementBaseType = (int)stream.ReadUInt16();
+                            }
+                            else if (DataLength == 3)
+                            {
+                                CollectionElementCount = -2; // TODO open collection
+                            }
+                            else if (DataLength <= 4)
+                            {
+                                CollectionElementCount = (int)ReadDataUInt(stream);
+                                if (CollectionElementCount < 0) // TODO Max
+                                {
+                                    throw new Bms1Exception("array length out of bounds: " + CollectionElementCount);
+                                }
+                            }
+                            else
+                            {
+                                SkipData(stream);
+                            }
                         }
                         break;
 
-                    case 9: 
-                        DataLength = 16;
-                        break;
+                    case 240: IsCharacterType = true; break;
+                    case 241: TagSetNumber = 1; break;
+                    case 242: TagSetNumber = 2; break;
+                    case 243: TagSetNumber = 3; break;
+                    case 244: break;
 
                     default:
-                        DataLength = _lengthSpecifier; // 0, 1, 2, 4, 8
+                        SkipData(stream);
                         break;
                 }
-
-                if (TagByte < 160)
-                {
-                    // Known value tags, DataLength is ready
-                    TagEnum = (Bms1Tag)(TagByte - _lengthSpecifier);
-                }
-                else
-                {
-                    // Known or unknown attribute- or value tag, DataLength is ready
-                    AttributeTag = (TagByte - _lengthSpecifier); // length specifier is set to 0 in AttributeTagType
-                }
             }
-            else
+            else // >= 245: Framing tags with specific data length
             {
                 BlockTypeId = -1;
-                Checksum = -1; 
-                // Known framing tag with specific data length
+                Checksum = -1;
+
                 switch (TagByte)
                 {
-                    case 240: TagEnum = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
-                    case 241: TagEnum = Bms1Tag.BaseBlockDefinition; BlockTypeId = stream.ReadUInt16(); break;
-                    case 242: TagEnum = Bms1Tag.BlockStart; break;
-                    case 243: TagEnum = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
-                    case 244: TagEnum = Bms1Tag.BlockEnd; break;
-                    case 245: TagEnum = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
-                    case 246: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 247: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 248: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 249: TagEnum = Bms1Tag.Attribute; AttributeTag = TagByte; stream.ReadUInt32(); break;
-                    case 251: TagEnum = Bms1Tag.MessageStart; break;
-                    case 253: TagEnum = Bms1Tag.MessageFooter; break;
-                    case 254: TagEnum = Bms1Tag.MessageEnd; break;
-
-                    case 250: TagEnum = Bms1Tag.MessageStart; 
+                    case 245:
+                        TagEnum = Bms1Tag.MessageStart;
                         var pattern = stream.ReadUInt32();
                         if (pattern != 0x544D4201) // decimal data [01, 66, 77, 83]
                         {
@@ -127,9 +183,58 @@
                         }
                         break;
 
+                    case 246: TagEnum = Bms1Tag.BlockStart; break;
+                    case 247: TagEnum = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
+                    case 248: TagEnum = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
+                    case 249: TagEnum = Bms1Tag.BlockEnd; break;
+                    case 250: TagEnum = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
+                    case 251: TagEnum = Bms1Tag.MessageFooter; break;
+                    case 252: TagEnum = Bms1Tag.MessageEnd; break;
+                    case 253: stream.ReadUInt32(); break;
+                    case 254: stream.ReadUInt32(); break;
+
                     default:
-                        throw new Bms1Exception("invalid framing tag = " + TagByte); // 252(version2) and 255
+                        throw new Bms1Exception("invalid framing tag = " + TagByte); // 255
                 }
+            }
+        }
+
+
+        private void EvaluateDataLength(BinaryReader stream)
+        {
+            _lengthSpecifier = TagByte % 10; // 0..9
+            switch (_lengthSpecifier)
+            {
+                case 3:
+                    DataLength = -3; // undefined length
+                    break;
+
+                case 5:
+                    IsArrayData = true;
+                    DataLength = -1; // zero terminated string
+                    break;
+
+                case 6:
+                    IsArrayData = true;
+                    DataLength = stream.ReadByte();
+                    break;
+
+                case 7:
+                    IsArrayData = true;
+                    DataLength = stream.ReadInt32();
+                    if (DataLength < 0)
+                    {
+                        throw new Bms1Exception("unknown data length = " + DataLength);
+                    }
+                    break;
+
+                case 9:
+                    DataLength = 16;
+                    break;
+
+                default:
+                    DataLength = _lengthSpecifier; // 0, 1, 2, 4, 8
+                    break;
             }
         }
 

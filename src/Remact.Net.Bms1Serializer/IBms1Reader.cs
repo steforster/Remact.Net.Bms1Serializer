@@ -33,8 +33,7 @@
 
         char  ReadChar();
         string ReadString();
-        
-//        bool ReadStrings(ref IList<string> data);
+        IList<string> ReadStrings();
 //        
 //        bool ReadDate(ref DateTime data);
 //        bool ReadTime(ref DateTime data);

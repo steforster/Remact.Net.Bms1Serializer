@@ -3,38 +3,51 @@
     public enum Bms1Tag
     {
         // Known value tags.
-        BoolFalse = 10,
-        BoolTrue = 11,
-        Null = 12,
-        Byte = 20,  //  8 bit, unsigned
-        UInt16 = 30,  // 16 bit, unsigned
-        Int16 = 40,   // 16 bit, signed
-        UInt32 = 50,  // 32 bit
-        Int32 = 60,
-        Int64 = 70,  // 64 bit, signed
-        Enum = 80,  //  8...64 bit
-        Bitset = 90,  //  8..128 bit
-        Decimal = 100, //128 bit
-        Float = 110, // 32 bit
-        Double = 120, // 64 bit
-        Date = 130,
-        Time = 140,
-        Char = 150, // all 10' tags must be defined up to 150, see 'TagReader' !
+        Null = 7,
+        BoolFalse = 8,
+        BoolTrue = 9,
+        Byte = 10,  //  8 bit, unsigned
+        UInt16 = 20,  // 16 bit, unsigned
+        Int16 = 30,   // 16 bit, signed
+        UInt32 = 40,  // 32 bit
+        Int32 = 50,
+        Int64 = 60,  // 64 bit, signed
+        Enum = 70,  //  8...64 bit
+        Bitset = 80,  //  8..128 bit
+        Decimal = 90, //128 bit
+        Float = 100, // 32 bit
+        Double = 110, // 64 bit
+        Date = 120,
+        Time = 130,
+        Char = 140, // all 10' tags must be defined up to 140, see 'TagReader' !
 
         // Known framing tags.
-        NullBlock = 240,
-        BaseBlockDefinition = 241,
-        BlockStart = 242,
-        BlockEnd = 244,
-        MessageStart = 250,
-        MessageFooter = 253,
-        MessageEnd = 254,
+        MessageStart = 245,
+        BlockStart = 246,
+        NullBlock = 248,
+        BlockEnd = 249,
+        MessageFooter = 251,
+        MessageEnd = 252,
         //Invalid = 255,
 
         Attribute = 256, // Any known or unknown attribute --> skip unknown attributes
         UnknownValue = 257  // Any unknown value tag --> skip only at end of block
     }
-    
+
+    internal enum Bms1Attribute
+    {
+        BlockName = 170,
+        BlockType = 180,
+        BaseBlockType = 182,
+        NameValue = 190,
+        Namespace = 200,
+        Collection = 230,
+        CharType = 240,
+        TagSet1 = 241,
+        TagSet2 = 242,
+        TagSet3 = 243,
+    }
+
     public class Bms1LengthSpec
     {
         public const int ZeroTerminated = 5;

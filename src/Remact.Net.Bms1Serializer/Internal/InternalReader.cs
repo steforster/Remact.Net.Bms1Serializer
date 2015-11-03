@@ -8,25 +8,26 @@
     internal class InternalReader : IBms1InternalReader, IMessageReader
     {
         internal BinaryReader Stream; // set by TestSerializer for testing purpose.
-        private Attributes _attributes;
         private TagReader _tagReader;
 
         public InternalReader()
         {
-            _attributes = new Attributes();
             _tagReader = new TagReader();
         }
 
         // returns false, when EndOfBlock or EndOfMessage == true after reading next tag
         private bool ReadNextTag()
         {
-            while (true)
-            {
-                _attributes.Clear();
+            //while (true)
+            //{
                 IsBlockType = false;
-                _attributes.ReadUntilNextValueOrFrameTag(Stream, _tagReader);
+                _tagReader.ClearAttributes();
+                while (_tagReader.TagEnum == Bms1Tag.Attribute)
+                {
+                    _tagReader.ReadTag(Stream);
+                }
 
-                if (_attributes.TagSetNumber != 0)
+                if (_tagReader.TagSetNumber != 0)
                 {
                     _tagReader.TagEnum = Bms1Tag.UnknownValue;
                 }
@@ -60,7 +61,7 @@
                 }
 
                 return !EndOfBlock;
-            }
+            //}
         }
 
 
@@ -199,12 +200,12 @@
         
         public bool IsCollection
         {
-            get { return _attributes.CollectionElementCount != -1; }
+            get { return _tagReader.CollectionElementCount != -1; }
         }
 
         public int CollectionElementCount
         {
-            get { return _attributes.CollectionElementCount; }
+            get { return _tagReader.CollectionElementCount; }
         }
 
         public Bms1Tag TagEnum
@@ -219,7 +220,7 @@
 
         public bool IsCharacterType
         {
-            get { return _attributes.IsCharacterType; }
+            get { return _tagReader.IsCharacterType; }
         }
 
         public bool IsBlockType
@@ -239,22 +240,22 @@
 
         public string ObjectType
         {
-            get { return _attributes.ObjectType; }
+            get { return _tagReader.ObjectType; }
         }
         
         public string ObjectName
         {
-            get { return _attributes.ObjectName; }
+            get { return _tagReader.ObjectName; }
         }
 
         public List<string> NameValueAttributes
         {
-            get { return _attributes.NameValue; }
+            get { return _tagReader.NameValue; }
         }
 
         public List<string> NamespaceAttributes
         {
-            get { return _attributes.Namespace; }
+            get { return _tagReader.Namespace; }
         }
 
         public bool EndOfMessage
@@ -303,7 +304,7 @@
 
             if (IsCollection)
             {
-                attr += " Collection ["+_attributes.CollectionElementCount+"]";
+                attr += " Collection ["+ _tagReader.CollectionElementCount+"]";
             }
 
             if (IsArrayData) // attribute coded in the LengthSpecifier

@@ -293,5 +293,23 @@
         {
             Internal.WriteDataString(Bms1Tag.Char, data); // supports null
         }
+
+        public void WriteStrings(IList<string> data)
+        {
+            if (data == null)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.CollectionElementCount = data.Count;
+                Internal.WriteAttributesAndTag(Bms1Tag.BlockStart);
+                foreach (var s in data)
+                {
+                    Internal.WriteDataString(Bms1Tag.Char, s); // supports null
+                }
+                Internal.WriteAttributesAndTag(Bms1Tag.BlockEnd);
+            }
+        }
     }
 }
