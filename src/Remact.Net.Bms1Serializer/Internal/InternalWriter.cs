@@ -58,7 +58,7 @@
             NameValueAttributes = null;
             NamespaceAttributes = null;
             IsCharacterType = false;
-            BlockTypeId = -1;
+            //BlockTypeId = -1;
         }
 
         private void WriteAttributes()
@@ -96,10 +96,10 @@
             get; set;
         }
 
-        public int BlockTypeId
-        {
-            get; set;
-        }
+        //public int BlockTypeId
+        //{
+        //    get; set;
+        //}
 
         public string ObjectType
         {

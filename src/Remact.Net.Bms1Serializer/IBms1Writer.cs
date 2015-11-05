@@ -8,10 +8,8 @@
     {
         IBms1InternalWriter Internal { get; }
 
-
-        //        void WriteBlock(IBms1Dto blockDto);
-
-        //        void WriteBlocks(IList<IBms1Dto> data);
+        void WriteBlock(IBms1Dto blockDto);
+        void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId);
 
         void WriteBool(bool data);
         void WriteBool(bool? data);

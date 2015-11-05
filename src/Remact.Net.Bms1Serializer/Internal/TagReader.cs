@@ -6,7 +6,7 @@
     using System.Text;
 
     /// <summary>
-    /// Represents the tag with datalength. 
+    /// Represents the tag with attributes and datalength. 
     /// Does not include the data.
     /// Supports basic reading and writing functions.
     /// </summary>
@@ -24,21 +24,22 @@
         
         public bool IsArrayData;  // DataLength(in bytes) contains an array of TagType
 
-        public int DataLength; // -1 = zero terminated
-        
+        public int DataLength; // -1 = zero terminated, -3 = undefined length
+
         public int BlockTypeId; // after BlockStart or NullBlock or BaseBlockDefinition, -1 when no type id available
 
-        public int Checksum; // after BlockEnd, is -1 when no checksum available
+        public uint Checksum; // after BlockEnd
+        public bool ChecksumAvailable;
 
-        
+
         // Attributes collected for next value
         public string ObjectName;   // null = no name
 
         public string ObjectType;
 
-        public int CollectionElementCount;    // -1 = no collection
+        public int CollectionElementCount;    // -1 = no collection, -2 = collection until end of block (not a predefined length)
 
-        public int CollectionElementBaseType;    // -1 = no collection or no base type
+        public int CollectionElementBaseType; // -1 = no collection or no base type
 
         public List<string> NameValue;
 
@@ -68,6 +69,8 @@
             IsArrayData = false;
             DataLength = 0;
             _lengthSpecifier = 0;
+            BlockTypeId = -1;
+            ChecksumAvailable = false;
 
             TagByte = stream.ReadByte(); // 0..255
             if (TagByte < 10)
@@ -133,15 +136,15 @@
 
                     case 230:
                         {
-                            if (DataLength == 0)
+                            if (_lengthSpecifier == 0)
                             {
                                 CollectionElementBaseType = (int)stream.ReadUInt16();
                             }
-                            else if (DataLength == 3)
+                            else if (_lengthSpecifier == 3)
                             {
                                 CollectionElementCount = -2; // TODO open collection
                             }
-                            else if (DataLength <= 4)
+                            else if (_lengthSpecifier <= 4)
                             {
                                 CollectionElementCount = (int)ReadDataUInt(stream);
                                 if (CollectionElementCount < 0) // TODO Max
@@ -169,9 +172,6 @@
             }
             else // >= 245: Framing tags with specific data length
             {
-                BlockTypeId = -1;
-                Checksum = -1;
-
                 switch (TagByte)
                 {
                     case 245:
@@ -187,7 +187,7 @@
                     case 247: TagEnum = Bms1Tag.BlockStart; BlockTypeId = stream.ReadUInt16(); break;
                     case 248: TagEnum = Bms1Tag.NullBlock; BlockTypeId = stream.ReadUInt16(); break;
                     case 249: TagEnum = Bms1Tag.BlockEnd; break;
-                    case 250: TagEnum = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt16(); break;
+                    case 250: TagEnum = Bms1Tag.BlockEnd; Checksum = stream.ReadUInt32(); ChecksumAvailable = true; break;
                     case 251: TagEnum = Bms1Tag.MessageFooter; break;
                     case 252: TagEnum = Bms1Tag.MessageEnd; break;
                     case 253: stream.ReadUInt32(); break;
@@ -242,7 +242,9 @@
         // Keeps a single buffer of maximum read length. Create a new Bms1Tag to free the buffer memory.
         public string ReadDataString(BinaryReader stream)
         {
-            if (_lengthSpecifier == 0 || DataLength == 0)
+            var len = DataLength;
+            DataLength = 0;
+            if (_lengthSpecifier == 0 || len == 0)
             {
                 return string.Empty;
             }
@@ -259,7 +261,7 @@
                 return Convert.ToString((char)i);
             }
 
-            if (_lengthSpecifier == 5 || DataLength < 0)
+            if (_lengthSpecifier == 5 || len == -1)
             {
                 if (_byteBuffer == null)
                 {
@@ -287,35 +289,40 @@
                 }
             }
 
-            var buffer = stream.ReadBytes(DataLength);
+            var buffer = stream.ReadBytes(len);
             return Encoding.UTF8.GetString(buffer, 0, buffer.Length);
         }
 
 
         public uint ReadDataUInt(BinaryReader stream)
         {
-            switch (DataLength)
+            var len = DataLength;
+            DataLength = 0;
+            switch (len)
             {
                 case 0: return 0;
                 case 1: return stream.ReadByte();
                 case 2: return stream.ReadUInt16();
                 case 4: return stream.ReadUInt32();
                 default:
-                    throw new Bms1Exception("invalid data length for UInt: " + DataLength);
+                    // ? stream.ReadBytes(len); // skip unknown data
+                    throw new Bms1Exception("invalid data length for UInt: " + len);
             }
         }
 
 
         public void SkipData(BinaryReader stream)
         {
-            if (DataLength == 0)
+            var len = DataLength;
+            DataLength = 0; // do not read again
+            if (len == 0)
             {
                 return; // no data to skip
             }
 
-            if (DataLength > 0)
+            if (len > 0)
             {
-                stream.ReadBytes(DataLength); // skip unknown data
+                stream.ReadBytes(len); // skip unknown data
                 return;
             }
 

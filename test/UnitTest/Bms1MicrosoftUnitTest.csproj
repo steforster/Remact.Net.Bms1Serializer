@@ -53,6 +53,8 @@
     <Compile Include="..\..\src\Remact.Net.Bms1Serializer\Properties\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="MessageContracts.cs" />
+    <Compile Include="MessageTest.cs" />
     <Compile Include="ValueStreamTest.cs" />
     <Compile Include="Bms1TestFrameworkDefinitions.cs" />
   </ItemGroup>

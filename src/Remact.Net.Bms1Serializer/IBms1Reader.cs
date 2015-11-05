@@ -7,10 +7,10 @@
     public interface IBms1Reader
     {
         IBms1InternalReader Internal { get; }
-        
-        // ??? returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        bool ReadBlock(IBms1Dto blockDto);
-        
+
+        // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
+        T ReadBlock<T>(Func<IBms1Reader,T> readDto);
+
         bool ReadBlocks(Func<IBms1InternalReader, IBms1Dto> blockFactory);
 
         // check Internal.EndOfBlock before calling Read... method.

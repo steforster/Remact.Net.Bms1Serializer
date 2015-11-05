@@ -1,8 +1,10 @@
 namespace Remact.Net.Bms1Serializer.Internal
 {
-    using System;
     using System.IO;
     
+    /// <summary>
+    /// Used for unit testing instead of Bms1MessageSerializer
+    /// </summary>
     public class TestSerializer
     {
         private Bms1Reader _reader;

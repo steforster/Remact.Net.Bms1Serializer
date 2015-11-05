@@ -2,7 +2,6 @@
 {
     using System;
     using System.IO;
-    using System.Text;
     using System.Collections.Generic;
 
     internal class InternalReader : IBms1InternalReader, IMessageReader
@@ -18,50 +17,47 @@
         // returns false, when EndOfBlock or EndOfMessage == true after reading next tag
         private bool ReadNextTag()
         {
-            //while (true)
-            //{
-                IsBlockType = false;
-                _tagReader.ClearAttributes();
-                while (_tagReader.TagEnum == Bms1Tag.Attribute)
+            IsBlockType = false;
+            _tagReader.ClearAttributes();
+            while (_tagReader.TagEnum == Bms1Tag.Attribute)
+            {
+                _tagReader.ReadTag(Stream);
+            }
+
+            if (_tagReader.TagSetNumber != 0)
+            {
+                _tagReader.TagEnum = Bms1Tag.UnknownValue;
+            }
+
+            // block or value tag and its attributes are read, data is available for read
+            if (_tagReader.TagEnum == Bms1Tag.MessageFooter || _tagReader.TagEnum == Bms1Tag.MessageEnd)
+            {
+                EndOfMessage = true;
+                EndOfBlock = true;
+                if (BlockNestingLevel != 0)
                 {
-                    _tagReader.ReadTag(Stream);
+                    BlockNestingLevel = 0;
+                    throw new Bms1Exception("wrong block nesting at end of message: " + BlockNestingLevel);
+                }
+            }
+
+            if (!EndOfMessage)
+            {
+                if (_tagReader.TagEnum == Bms1Tag.BlockStart)
+                {
+                    EndOfBlock = false;
+                    IsBlockType = true;
+                    BlockNestingLevel++;
                 }
 
-                if (_tagReader.TagSetNumber != 0)
+                if (_tagReader.TagEnum == Bms1Tag.BlockEnd)
                 {
-                    _tagReader.TagEnum = Bms1Tag.UnknownValue;
-                }
-
-                // block or value tag and its attributes read, data is available for read
-                if (_tagReader.TagEnum == Bms1Tag.MessageFooter || _tagReader.TagEnum == Bms1Tag.MessageEnd)
-                {
-                    EndOfMessage = true;
                     EndOfBlock = true;
-                    if (BlockNestingLevel != 0)
-                    {
-                        BlockNestingLevel = 0;
-                        throw new Bms1Exception("wrong block nesting at end of message: " + BlockNestingLevel);
-                    }
+                    BlockNestingLevel--;
                 }
+            }
 
-                if (!EndOfMessage)
-                {
-                    if (_tagReader.TagEnum == Bms1Tag.BlockStart)
-                    {
-                        EndOfBlock = false;
-                        IsBlockType = true;
-                        BlockNestingLevel++;
-                    }
-
-                    if (_tagReader.TagEnum == Bms1Tag.BlockEnd)
-                    {
-                        EndOfBlock = true;
-                        BlockNestingLevel--;
-                    }
-                }
-
-                return !EndOfBlock;
-            //}
+            return !EndOfBlock;
         }
 
 
@@ -73,76 +69,73 @@
             Stream = binaryReader;
             while (true)
             {
-//                try
-//                {
-                    EndOfMessage = true;
-                    EndOfBlock = true;
-                    BlockNestingLevel = 0;
-                    if (_tagReader.TagEnum != Bms1Tag.MessageStart)
-                    {
-                        ReadNextTag();
-                    }
-
-                    if (_tagReader.TagEnum == Bms1Tag.MessageStart)
-                    {
-                        if (ReadNextTag() && _tagReader.TagEnum == Bms1Tag.BlockStart)
-                        {
-                            return _tagReader.BlockTypeId; // valid message- and block start
-                        }
-                    }
-                    // not a valid message- and block start found
+                EndOfMessage = false;
+                EndOfBlock = false;
+                BlockNestingLevel = 0;
+                if (_tagReader.TagEnum != Bms1Tag.MessageStart)
+                {
                     _tagReader.SkipData(Stream);
-//                }
-//                catch (Bms1Exception ex)
-//                {
-//                    // Invalid data or resynchronizing
-//                }
+                    ReadNextTag();
+                }
+
+                if (_tagReader.TagEnum == Bms1Tag.MessageStart)
+                {
+                    if (ReadNextTag() && _tagReader.TagEnum == Bms1Tag.BlockStart)
+                    {
+                        return _tagReader.BlockTypeId; // valid message- and block start
+                    }
+                }
             }// while
         }
 
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        public bool ReadMessage(Action dtoAction)
+        // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
+        public T ReadMessage<T>(Func<T> readMessageDto)
         {
             if (EndOfBlock || _tagReader.TagEnum != Bms1Tag.BlockStart || BlockNestingLevel != 1)
             {
-                throw new Bms1Exception("not ready for message");
+                throw new Bms1Exception("stream is not at start of message");
             }
 
-            var ok = ReadBlock(dtoAction);
+            T dto = ReadBlock(readMessageDto);
 
             while (_tagReader.TagEnum != Bms1Tag.MessageEnd && _tagReader.TagEnum != Bms1Tag.MessageStart)
             {
                 // unknown blocks or values at end of message or resynchronization
-                ReadNextTag();
                 _tagReader.SkipData(Stream);
+                ReadNextTag();
             }
-            return ok;
+
+            return dto;
         }
 
-        // returns false, when not read because: NoData(null), EndOfBlock, EndOfMessage
-        public bool ReadBlock(Action dtoAction)
+        // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
+        public T ReadBlock<T>(Func<T> readDto)
         {
+            T dto = default(T);
             if (EndOfBlock)
             {
-                return false;
+                return dto;
             }
 
             var thisBlockLevel = BlockNestingLevel;
             Bms1Exception exception = null;
-            bool ok = true;
             try
             {
+                if (_tagReader.TagEnum == Bms1Tag.Null)
+                {
+                    ReadNextTag(); // get attributes of next value
+                    return dto; // null or default
+                }
+
                 if (_tagReader.TagEnum != Bms1Tag.BlockStart)
                 {
-                    throw new Bms1Exception("wrong block start");
+                    throw new Bms1Exception("stream is not at start of block");
                 }
-                
-                dtoAction(); // call the user code to deserialize the data transfer object
+                ReadNextTag(); // get attributes of first value
 
-                if (BlockNestingLevel != thisBlockLevel)
+                if (readDto != null)
                 {
-                    BlockNestingLevel = 0;
-                    throw new Bms1Exception("wrong block nesting = " + BlockNestingLevel + " at end of block level: " + thisBlockLevel);
+                    dto = readDto(); // call the user code to deserialize the data transfer object
                 }
             }
             catch (Bms1Exception ex)
@@ -153,14 +146,15 @@
             while (!BlockFinished (thisBlockLevel))
             {
                 // skip unknown blocks or values at end of block or resynchronize
-                ReadNextTag();
                 _tagReader.SkipData(Stream);
+                ReadNextTag();
             }
 
-            if (BlockNestingLevel != thisBlockLevel - 1)
+            var endOfBlockLevel = BlockNestingLevel + 1;
+            if (endOfBlockLevel != thisBlockLevel)
             {
                 BlockNestingLevel = 0;
-                throw new Bms1Exception("wrong block nesting = " + BlockNestingLevel + " after block level: " + thisBlockLevel, exception);
+                throw new Bms1Exception("wrong block nesting = " + endOfBlockLevel + " at end of block level: " + thisBlockLevel, exception);
             }
             
             if (_tagReader.TagEnum != Bms1Tag.BlockEnd)
@@ -173,7 +167,8 @@
             {
                 throw new Bms1Exception ("cannot read block level: " + thisBlockLevel, exception);
             }
-            return ok;
+
+            return dto;
         }
         
         private bool BlockFinished(int blockLevel)
@@ -182,7 +177,7 @@
             {
                 return true;
             }
-            return BlockNestingLevel <= blockLevel && (_tagReader.TagEnum == Bms1Tag.BlockEnd || _tagReader.TagEnum == Bms1Tag.BlockStart);
+            return BlockNestingLevel < blockLevel && (_tagReader.TagEnum == Bms1Tag.BlockEnd || _tagReader.TagEnum == Bms1Tag.BlockStart);
         }
 
 
@@ -203,6 +198,7 @@
             get { return _tagReader.CollectionElementCount != -1; }
         }
 
+        // -1 = no collection, -2 = collection until end of block (not a predefined length)
         public int CollectionElementCount
         {
             get { return _tagReader.CollectionElementCount; }

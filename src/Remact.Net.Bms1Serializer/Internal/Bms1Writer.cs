@@ -5,8 +5,6 @@
     using System.IO;
     using System.Linq;
 
-    using Remact.Net.Bms1Serializer.Internal;
-
     internal class Bms1Writer : IBms1Writer
     {
         internal BinaryWriter Stream;
@@ -25,6 +23,39 @@
         public void WriteNull()
         {
             Internal.WriteAttributesAndTag(Bms1Tag.Null);
+        }
+
+        //------------------------------
+        public void WriteBlock(IBms1Dto blockDto)
+        {
+            if (blockDto == null)
+            {
+                WriteNull();
+            }
+            else
+            {
+                _messageWriter.WriteBlock(Stream, blockDto.Bms1BlockTypeId, () => blockDto.WriteToBms1Stream(this));
+            }
+        }
+
+        public void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId)
+        {
+            if (data == null)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.CollectionElementCount = data.Count;
+                _messageWriter.WriteBlock(Stream, baseBlockTypeId,
+                    () =>
+                    {
+                        foreach (var b in data)
+                        {
+                            WriteBlock(b);
+                        }
+                    });
+            }
         }
 
         //------------------------------

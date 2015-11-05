@@ -41,11 +41,11 @@
         // returns next message block type
         int ReadMessageStart(BinaryReader binaryReader);
 
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        bool ReadMessage(Action dtoAction);
+        // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
+        T ReadMessage<T>(Func<T> readMessageDto);
 
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        bool ReadBlock(Action dtoAction);
+        // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
+        T ReadBlock<T>(Func<T> readDto);
     }
     
     
@@ -54,7 +54,7 @@
     {
         int  CollectionElementCount { get; set; }  // -1 = no collection, -2 = collection until end of block (not a predefined length)
         bool IsCharacterType { get; set; }
-        int  BlockTypeId { get; set; } // -1 = no id
+        //int  BlockTypeId { get; set; } // -1 = no id
 
         string       ObjectType { get; set; }    // null = no type
         string       ObjectName { get; set; }    // null = no name

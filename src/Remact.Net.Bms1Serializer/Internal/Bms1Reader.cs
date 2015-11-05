@@ -19,25 +19,42 @@
             _messageReader = messageReader;
         }
 
-        // returns false, when not read because: NoData(null), not matching type, EndOfBlock, EndOfMessage
-        public bool ReadBlock(IBms1Dto blockDto)
+        // returns false, when not read because: EndOfBlock, EndOfMessage, blockDto==null (block is skipped)
+        //public bool ReadBlock(IBms1Dto blockDto)
+        //{
+        //    if (Internal.EndOfBlock)
+        //    {
+        //        return false;
+        //    }
+
+        //    if (Internal.IsBlockType && !Internal.IsCollection)
+        //    {
+        //        if (blockDto != null)
+        //        {
+        //            return _messageReader.ReadBlock(() => blockDto.ReadFromBms1Stream(this));
+        //        }
+        //        return _messageReader.ReadBlock(null); // skip unknown block type
+        //    }
+        //    throw Internal.Bms1Exception("cannot read block");
+        //}
+
+
+        // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
+        public T ReadBlock<T>(Func<IBms1Reader, T> readDto)
         {
-            if (blockDto == null)
+            if (Internal.IsCollection)
             {
-                throw new ArgumentNullException("blockDto");
+                throw Internal.Bms1Exception("cannot read block");
             }
-            if (Internal.EndOfBlock)
+
+            if (readDto == null)
             {
-                return false;
+                return _messageReader.ReadBlock<T>(null); // skip unknown block type
             }
-            
-            if (Internal.IsBlockType && !Internal.IsCollection)
-            {
-                return _messageReader.ReadBlock(() => blockDto.Bms1Read(this));
-            }
-            throw Internal.Bms1Exception("cannot read block");
+
+            return _messageReader.ReadBlock(() => readDto(this));
         }
-        
+
 
         public bool ReadBlocks(Func<IBms1InternalReader, IBms1Dto> blockFactory)
         {
@@ -54,7 +71,7 @@
                 do
                 {
                     var blockDto = blockFactory(Internal);
-                    _messageReader.ReadBlock(() => blockDto.Bms1Read(this));
+                    ////////////_messageReader.ReadBlock(() => blockDto.ReadFromBms1Stream(this));
                     readCount++;
                 }
                 while (!Internal.EndOfBlock && Internal.IsBlockType && readCount < count);

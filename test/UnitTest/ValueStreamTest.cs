@@ -490,6 +490,8 @@
             // Message end
             Assert.IsTrue(_serializer.Reader.Internal.EndOfBlock);
         }
+
+        // TODO collections
     }
 }
 
