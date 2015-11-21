@@ -14,14 +14,15 @@ namespace Remact.Net.TcpStream
     /// </summary>
     public class TcpStreamChannel : IDisposable
     {
-        private SocketAsyncEventArgs _receiveEventArgs;
-        private SocketAsyncEventArgs _sendEventArgs;
-        private int _bufferSize;
         private Action<TcpStreamChannel> _onDataReceivedAction;
         private Action<TcpStreamChannel> _onChannelDisconnectedAction;
+        private int _bufferSize;
+
+        private SocketAsyncEventArgs _receiveEventArgs;
         private TcpStreamIncoming _tcpStreamIncoming;
         private bool _userReadsMessage;
 
+        private SocketAsyncEventArgs _sendEventArgs;
         private TcpStreamOutgoing _tcpStreamOutgoing;
 
         public Socket ClientSocket { get; private set; }
@@ -43,21 +44,16 @@ namespace Remact.Net.TcpStream
         /// Starts the IO streams using the given socket. The socket must have been opened by a service or a client.
         /// </summary>
         /// <param name="onDataReceived">The action is called back (on a threadpool thread), when a message start is received.</param>
-        /// <param name="onChannelDisconnected">The action is called back, when the channel is disconnected from remote.</param>
-        /// <param name="bufferSize">Defines size of the receive buffer and minimum size of the send buffer.</param>
-        public void Start(Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected, int bufferSize)
+        /// <param name="onChannelDisconnected">The action is called back, when the channel is disconnected from remote. May be null.</param>
+        /// <param name="bufferSize">Defines size of the receive buffer and minimum size of the send buffer. Default = 1500 bytes (one ethernet frame).</param>
+        public void Start(Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize=1500)
         {
             if (onDataReceived == null)
             {
                 throw new ArgumentNullException("onDataReceived");
             }
 
-            if (onChannelDisconnected == null)
-            {
-                throw new ArgumentNullException("onChannelDisconnected");
-            }
-
-            if (!ClientSocket.Connected)
+            if (_disposed || !ClientSocket.Connected)
             {
                 DisposeSocket(ClientSocket);
                 throw new SocketException((int)SocketError.NotConnected);
@@ -85,37 +81,42 @@ namespace Remact.Net.TcpStream
             StartAsyncRead();
         }
 
+        /// <summary>
+        /// A stream to deserialize incoming messages. Use it when your onDataReceived method is called back.
+        /// </summary>
         public Stream InputStream  { get {return _tcpStreamIncoming; }}
 
+        /// <summary>
+        /// A stream to serialize outgoing messages. Call FlushAsync() to write the message buffer to the network.
+        /// </summary>
         public TcpStreamOutgoing OutputStream { get { return _tcpStreamOutgoing; } }
 
-        public bool IsConnected { get { return (null != ClientSocket) && ClientSocket.Connected; } }
+        /// <summary>
+        /// Returns true, when socket is connected. False otherwise.
+        /// </summary>
+        public bool IsConnected { get { return !_disposed && ClientSocket.Connected; } }
 
         /// <summary>
-        /// The latest exception. Is null as long as client socket is running.
+        /// The latest exception. Is null as long as client socket is connected.
         /// </summary>/
         public Exception LatestException { get; internal set; }
 
 
         // Starts the ReceiveEventArgs for next incoming data on server- or client side. Does not block.
-        // Returns false, when finished synchronous and data is already available
+        // Returns false, when socket is closed.
         // Examples: http://msdn.microsoft.com/en-us/library/system.net.sockets.socketasynceventargs%28v=vs.110%29.aspx
         //           http://www.codeproject.com/Articles/22918/How-To-Use-the-SocketAsyncEventArgs-Class
         //           http://netrsc.blogspot.ch/2010/05/async-socket-server-sample-in-c.html
-        // Only one ReceiveEventArgs exist for one stream. Therefore, no concurrency while receiving.
-        // Receiving is on a threadpool thread. Sending is on another thread.
-        // At least under Mono 2.10.8 there is a threading issue (multi core ?) that can be prevented,
-        // when we thread-lock access to the ReceiveAsync method.
         private bool StartAsyncRead()
         {
             try
             {
                 if (!_disposed)
                 {
-                    // when data arrives, fill it into the buffer (see SetBuffer) and call OnDataReceived:
+                    // when data arrives asynchronous, fill it into the buffer (see SetBuffer) and call OnDataReceived:
                     if (!ClientSocket.ReceiveAsync(_receiveEventArgs))
                     {
-                        OnDataReceived(null, _receiveEventArgs);
+                        OnDataReceived(null, _receiveEventArgs); // data received synchronous
                     }
                     return true;
                 }
@@ -127,43 +128,42 @@ namespace Remact.Net.TcpStream
             return false;
         }
 
-        // asynchronously called on a threadpool thread:
+        // OnDataReceived is asynchronously called on a threadpool thread. Sending is on another thread.
+        // Only one ReceiveEventArgs exist for one stream. Therefore, no concurrency while receiving.
+        // At least under Mono 2.10.8 there is a threading issue (multi core ?) that can be prevented,
+        // when we thread-lock access to the ReceiveAsync method.
         private void OnDataReceived(object sender, SocketAsyncEventArgs e)
         {
             try
             {
-                //var context = (Context)e.UserToken;
-                //context.Reset(); // only one ReceiveEventArgs exist for this context. Therefore, no concurrency.
-                int receivedBytes = 0;
-                if (e.SocketError == SocketError.Success)
+                do
                 {
-                    receivedBytes = e.BytesTransferred;
-                }
+                    int receivedBytes = e.BytesTransferred;
+                    if (e.SocketError != SocketError.Success || receivedBytes <= 0)
+                    {
+                        OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when receiving from " + e.RemoteEndPoint), null);
+                        return;
+                    }
 
-                if (receivedBytes > 0)
-                {
                     if (_userReadsMessage)
                     {
-                        // Free the threadpool thread that is reading the message.
+                        // Free the threadpool thread that is reading the message (on another thread).
                         // When even more data must be read, StartAsyncRead is called again by _tcpStreamIncoming.
-                        _tcpStreamIncoming.DataReceived(e.Buffer, receivedBytes, true);
+                        _tcpStreamIncoming.DataReceived(e.Buffer, e.BytesTransferred, true);
+                        return;
                     }
-                    else
-                    {
-                        _tcpStreamIncoming.DataReceived(e.Buffer, receivedBytes, false);
-                        _userReadsMessage = true;
-                        // Signal the user about an incoming message.
-                        // This threadpool thread will deserialize the message using _tcpStreamIncoming.
-                        // It may block, when more data must be awaited.
-                        _onDataReceivedAction(this); 
-                        _userReadsMessage = false;
-                        StartAsyncRead(); // ???? recursive in case data is already here
-                    }
+
+                    // set up the stream with the first bytes of a new message 
+                    _tcpStreamIncoming.DataReceived(e.Buffer, e.BytesTransferred, false);
+
+                    // Signal the user about an incoming message.
+                    // This threadpool thread will deserialize the message using _tcpStreamIncoming.
+                    // It may block, when more data must be awaited.
+                    _userReadsMessage = true;
+                    _onDataReceivedAction(this);
+                    _userReadsMessage = false;
                 }
-                else
-                {
-                    OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when receiving from " + e.RemoteEndPoint), null);
-                }
+                while (!_disposed && !ClientSocket.ReceiveAsync(e)); // returns false, when new data has been received synchronously
             }
             catch (Exception ex)
             {
@@ -175,14 +175,14 @@ namespace Remact.Net.TcpStream
 
 
         // called from _tcpStreamOutgoing on user actor worker thread, when message has been serialized into buffer.
-        private Task SendAsync(byte[] messageBuffer, int length)
+        private Task SendAsync(byte[] messageBuffer, int count)
         {
             var tcs = new TaskCompletionSource<bool>();
             try
             {
                 if (!_disposed)
                 {
-                    _sendEventArgs.SetBuffer(messageBuffer, 0, length);
+                    _sendEventArgs.SetBuffer(messageBuffer, 0, count);
                     _sendEventArgs.UserToken = tcs;
                     // when data is sent, call OnDataFlushed:
                     if (!ClientSocket.SendAsync(_sendEventArgs))
@@ -209,9 +209,18 @@ namespace Remact.Net.TcpStream
             var tcs = (TaskCompletionSource<bool>)e.UserToken;
             try
             {
-                if (e.SocketError == SocketError.Success)
+                if (e.SocketError == SocketError.Success && e.BytesTransferred == e.Count)
                 {
-                    tcs.TrySetResult(true);
+                    int currentCount = (int)_tcpStreamOutgoing.Position;
+                    _tcpStreamOutgoing.Position = 0;
+                    if (e.Count == currentCount)
+                    {
+                        tcs.TrySetResult(true);
+                    }
+                    else
+                    {
+                        tcs.TrySetException(new InvalidOperationException("changed stream position from "+ e.Count + " to "+ currentCount + " when asynchronously sending to " + e.RemoteEndPoint));
+                    }
                 }
                 else
                 {
@@ -232,7 +241,13 @@ namespace Remact.Net.TcpStream
             {
                 tcs.TrySetException(exception);
             }
-            _onChannelDisconnectedAction(this);
+
+            if (_onChannelDisconnectedAction != null)
+            {
+                var callback = _onChannelDisconnectedAction;
+                _onChannelDisconnectedAction = null;
+                callback(this);
+            }
         }
 
 

@@ -16,6 +16,9 @@ namespace Remact.Net.TcpStream
         private SocketAsyncEventArgs _connectEventArgs;
         private Timer _timer;
 
+        /// <summary>
+        /// Initializes a new TcpStreamClient.
+        /// </summary>
         public TcpStreamClient()
             : base(new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) // TcpClient(AddressFamily.InterNetwork);
         {

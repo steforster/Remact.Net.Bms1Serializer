@@ -23,7 +23,7 @@ namespace Remact.Net.TcpStream
         /// <summary>
         /// Creates a readable stream using Async IO.
         /// </summary>
-        /// <param name="startAsyncRead">A function to start the next asynchronous read operation.</param>
+        /// <param name="startAsyncRead">A function to start the next asynchronous read operation. It must return false, when socket is closed.</param>
         public TcpStreamIncoming(Func<bool> startAsyncRead)
         {
             if (startAsyncRead == null)
@@ -42,9 +42,14 @@ namespace Remact.Net.TcpStream
 
         /// <summary>
         /// Called by the SocketAsyncEventArgs callback (on a threadpool thread), when data has been added to the SocketAsyncEventArgs buffer.
+        /// When userReadsMessage==true, we are waiting on another thread in WaitForMoreData.
         /// </summary>
         public void DataReceived(byte[] socketBuffer, int availableBytes, bool userReadsMessage)
         {
+            if (_nextByteInBuffer < _bufferLength)
+            {
+                // TODO inconsistency: not all data read from previous buffer
+            }
             _socketBuffer = socketBuffer;
             _bufferLength = availableBytes;
             _nextByteInBuffer = 0;
@@ -54,6 +59,9 @@ namespace Remact.Net.TcpStream
             }
         }
 
+        /// <summary>
+        /// Called internally, when buffer is empty and message has not finished.
+        /// </summary>
         private bool WaitForMoreData()
         {
             _resetEvent.Reset();
@@ -67,7 +75,7 @@ namespace Remact.Net.TcpStream
 
         /// <summary>
         /// Return the next byte on the user thread. May wait asynchronously until new data has arrived.
-        /// Returns -1 when stream is closed.
+        /// Returns -1 when the stream is closed.
         /// </summary>
         public override int ReadByte()
         {
