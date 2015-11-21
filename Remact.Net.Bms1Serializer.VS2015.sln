@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Remact.Net.Bms1Serializer", "src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj", "{658FF815-D635-497E-BA72-F6A9D22692CE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bms1MicrosoftUnitTest", "test\UnitTest\Bms1MicrosoftUnitTest.csproj", "{B7215D9C-3576-41D2-A389-1EC0C5131A48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Remact.Net.TcpStream", "src\Remact.Net.TcpStream\Remact.Net.TcpStream.csproj", "{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,6 +23,10 @@ Global
 		{B7215D9C-3576-41D2-A389-1EC0C5131A48}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7215D9C-3576-41D2-A389-1EC0C5131A48}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B7215D9C-3576-41D2-A389-1EC0C5131A48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

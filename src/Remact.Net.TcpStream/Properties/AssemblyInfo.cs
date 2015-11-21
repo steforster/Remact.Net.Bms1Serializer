@@ -4,8 +4,8 @@ using System.Reflection;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Remact.Net.Bms1Serializer")]
-[assembly: AssemblyDescription("BMS1 binary message stream serializer")]
+[assembly: AssemblyTitle("Remact.Net.TcpStream")]
+[assembly: AssemblyDescription("Leightweight and efficient TCP network stream implementation.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("steforster@github.com")]
 [assembly: AssemblyProduct("Remact.Net")]
