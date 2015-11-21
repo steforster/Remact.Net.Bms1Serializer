@@ -14,7 +14,7 @@ namespace Remact.Net.TcpStream
         private IPEndPoint _endPoint;
         private ManualResetEvent _listenResetEvent = new ManualResetEvent(false);
         private SocketAsyncEventArgs _acceptEventArg;
-        private Action<TcpStreamChannel> _onClientConnectedAction;
+        private Action<TcpStreamChannel> _onClientAcceptedAction;
 
 
         /// <summary>
@@ -31,24 +31,24 @@ namespace Remact.Net.TcpStream
         /// Constructs an instance of the service and starts listening for incoming connections on designated endpoint.
         /// </summary>
         /// <param name="endpoint">The ethernet adapter and port number for connect requests.</param>
-        /// <param name="onClientConnected">The callback is fired, when a client connects to the service.</param>
-        public TcpStreamService(IPEndPoint endpoint, Action<TcpStreamChannel> onClientConnected)
+        /// <param name="onClientAccepted">The callback is fired, when the service accepts a new client connection.</param>
+        public TcpStreamService(IPEndPoint endpoint, Action<TcpStreamChannel> onClientAccepted)
         {
-           Initialize(endpoint, onClientConnected);
+           Initialize(endpoint, onClientAccepted);
         }
 
-        private void Initialize(IPEndPoint endpoint, Action<TcpStreamChannel> onClientConnected)
+        private void Initialize(IPEndPoint endpoint, Action<TcpStreamChannel> onClientAccepted)
         {
             if (endpoint == null)
             {
                 throw new ArgumentNullException("endpoint");
             }
-            if (onClientConnected == null)
+            if (onClientAccepted == null)
             {
                 throw new ArgumentNullException("onClientConnected");
             }
 
-            _onClientConnectedAction = onClientConnected;
+            _onClientAcceptedAction = onClientAccepted;
             _endPoint = endpoint;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
@@ -102,7 +102,7 @@ namespace Remact.Net.TcpStream
                 var channel = new TcpStreamChannel(e.AcceptSocket);
                 e.AcceptSocket = null;
 
-                _onClientConnectedAction(channel); // Callback to user. User has to start the channel.
+                _onClientAcceptedAction(channel); // Callback to user. User has to start the channel.
 
                 StartAsyncListening();
             }

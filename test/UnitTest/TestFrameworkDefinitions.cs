@@ -16,6 +16,11 @@ namespace NUnit.Framework
     public class Test : System.Attribute
     {
     }
+
+    public class TearDown : System.Attribute
+    {
+        // Called after each Test method
+    }
 }
 
 

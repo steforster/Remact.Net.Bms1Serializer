@@ -1,13 +1,13 @@
-﻿namespace Remact.Net.Bms1Serializer.UnitTest
+﻿using System;
+using System.IO;
+using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
+
+using Remact.Net.Bms1Serializer.Internal;
+
+namespace Remact.Net.Bms1UnitTest
 {
-    using System.Linq;
-
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using NUnit.Framework;
-
-    using System;
-    using System.IO;
-    using Remact.Net.Bms1Serializer.Internal;
 
     [TestClass]
     [TestFixture]

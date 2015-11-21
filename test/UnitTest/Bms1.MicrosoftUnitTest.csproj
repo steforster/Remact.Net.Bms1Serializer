@@ -6,8 +6,8 @@
     <ProjectGuid>{B7215D9C-3576-41D2-A389-1EC0C5131A48}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Remact.Net.Bms1Serializer.UnitTest</RootNamespace>
-    <AssemblyName>Remact.Net.Bms1Serializer.MicrosoftUnitTest</AssemblyName>
+    <RootNamespace>Remact.Net.Bms1UnitTest</RootNamespace>
+    <AssemblyName>Bms1.MicrosoftUnitTest</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -16,6 +16,7 @@
     <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -25,6 +26,7 @@
     <DefineConstants>TRACE;DEBUG;MicrosoftUnitTest</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,6 +35,7 @@
     <DefineConstants>TRACE;MicrosoftUnitTest</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -55,13 +58,18 @@
     </Compile>
     <Compile Include="MessageContracts.cs" />
     <Compile Include="MessageTest.cs" />
+    <Compile Include="TcpClientServerTest.cs" />
     <Compile Include="ValueStreamTest.cs" />
-    <Compile Include="Bms1TestFrameworkDefinitions.cs" />
+    <Compile Include="TestFrameworkDefinitions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj">
       <Project>{658ff815-d635-497e-ba72-f6a9d22692ce}</Project>
       <Name>Remact.Net.Bms1Serializer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\Remact.Net.TcpStream\Remact.Net.TcpStream.csproj">
+      <Project>{2f6c2e7a-6372-4020-810d-a23f9d47e9ab}</Project>
+      <Name>Remact.Net.TcpStream</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>

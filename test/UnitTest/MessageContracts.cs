@@ -1,8 +1,8 @@
-﻿using Remact.Net.Bms1Serializer;
-using System;
+﻿using System;
+using Remact.Net.Bms1Serializer;
 
 // see message documentation in https://github.com/steforster/bms1-binary-message-stream-format/blob/master/Example%20Interface%20Specification.md
-namespace Remact.Net.Bms1Serializer.UnitTest
+namespace Remact.Net.Bms1UnitTest
 {
     /// <summary>
     /// Empty message.

@@ -7,8 +7,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Remact.Net.Bms1Serializer</RootNamespace>
-    <AssemblyName>Remact.Net.Bms1Serializer</AssemblyName>
+    <RootNamespace>Remact.Net.TcpStream</RootNamespace>
+    <AssemblyName>Remact.Net.TcpStream</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
