@@ -11,7 +11,6 @@ namespace Remact.Net.TcpStream
     public class TcpStreamService : IDisposable
     {
         private Socket _listenSocket;
-        private IPEndPoint _endPoint;
         private ManualResetEvent _listenResetEvent = new ManualResetEvent(false);
         private SocketAsyncEventArgs _acceptEventArg;
         private Action<TcpStreamChannel> _onClientAcceptedAction;
@@ -49,24 +48,27 @@ namespace Remact.Net.TcpStream
             }
 
             _onClientAcceptedAction = onClientAccepted;
-            _endPoint = endpoint;
             _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             _listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
-            _listenSocket.Bind(_endPoint);
+            _listenSocket.Bind(endpoint);
             _listenSocket.Listen(10);
 
             _acceptEventArg = new SocketAsyncEventArgs();
             _acceptEventArg.Completed += OnAcceptNewClient;
 
+            if (!_listenSocket.AcceptAsync(_acceptEventArg))
+            {
+                OnAcceptNewClient(null, _acceptEventArg);
+            }
         }
 
         /// <summary>
-        /// Gets the end point this service is listening on.
+        /// Gets the end point this service is listening on. Returns null, when disposed.
         /// </summary>
         public IPEndPoint ListeningEndPoint
         {
-            get { return _endPoint; }
+            get { return _disposed ? null : _listenSocket.LocalEndPoint as IPEndPoint; }
         }
 
         /// <summary>
@@ -76,35 +78,27 @@ namespace Remact.Net.TcpStream
 
 
         /// <summary>
-        /// Start listening for next incoming TCP connection request.
-        /// </summary>
-        private void StartAsyncListening()
-        {
-            if (!_disposed && !_listenSocket.AcceptAsync(_acceptEventArg))
-            {
-                OnAcceptNewClient(null, _acceptEventArg);
-            }
-        }
-
-        /// <summary>
         /// A client has connected. Called from socket on threadpool thread.
         /// </summary>
         private void OnAcceptNewClient(object sender, SocketAsyncEventArgs e)
         {
             try
             {
-                if (_disposed || e.SocketError != SocketError.Success)
+                do
                 {
-                    LatestException = new SocketException((int)e.SocketError);
-                    return;
+                    if (_disposed || e.SocketError != SocketError.Success)
+                    {
+                        LatestException = new SocketException((int)e.SocketError);
+                        return;
+                    }
+
+                    var channel = new TcpStreamChannel(e.AcceptSocket);
+                    e.AcceptSocket = null;
+
+                    // Callback to user. User has to start the new channel.
+                    _onClientAcceptedAction(channel); 
                 }
-
-                var channel = new TcpStreamChannel(e.AcceptSocket);
-                e.AcceptSocket = null;
-
-                _onClientAcceptedAction(channel); // Callback to user. User has to start the channel.
-
-                StartAsyncListening();
+                while (!_disposed && !_listenSocket.AcceptAsync(_acceptEventArg));
             }
             catch (Exception ex)
             {

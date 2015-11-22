@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -14,7 +15,7 @@ namespace Remact.Net.TcpStream
     public class TcpStreamClient : TcpStreamChannel
     {
         private SocketAsyncEventArgs _connectEventArgs;
-        private Timer _timer;
+        private TaskCompletionSource<bool> _connectTcs;
 
         /// <summary>
         /// Initializes a new TcpStreamClient.
@@ -25,25 +26,45 @@ namespace Remact.Net.TcpStream
             ClientSocket.LingerState.Enabled = false;
             _connectEventArgs = new SocketAsyncEventArgs();
             _connectEventArgs.Completed += OnClientConnected;
-            _timer = new Timer(OnTimeoutExpired);
+        }
+
+        /// <summary>
+        /// After successfully connected, the Start method must be called (see TcpStreamChannel).
+        /// After a timeout defined by the operating system, the task fails when not connected.
+        /// </summary>
+        public Task ConnectAsync(Uri uri)
+        {
+            return ConnectAsync(uri.Host, uri.Port);
         }
 
         /// <summary>
         /// After successfully connected, the Start method must be called (see TcpStreamChannel).
         /// </summary>
-        /// <param name="remoteEndpoint"></param>
-        public Task ConnectAsync(IPEndPoint remoteEndpoint, int connectTimeoutMs)
+        public Task ConnectAsync(string hostOrIp, int tcpPort)
         {
-            var tcs = new TaskCompletionSource<bool>();
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(hostOrIp, out ipAddress))
+            {
+                // TODO
+            }
+
+            return ConnectAsync(new IPEndPoint(ipAddress, tcpPort));
+        }
+
+        /// <summary>
+        /// After successfully connected, the Start method must be called (see TcpStreamChannel).
+        /// </summary>
+        public Task ConnectAsync(EndPoint remoteEndpoint)
+        {
+            RemoteEndPoint = remoteEndpoint;
             _connectEventArgs.RemoteEndPoint = remoteEndpoint;
-            _connectEventArgs.UserToken = tcs;
-            _timer.Change(connectTimeoutMs, Timeout.Infinite);
+            _connectTcs = new TaskCompletionSource<bool>();
 
             if (!ClientSocket.ConnectAsync(_connectEventArgs))
             {
                 OnClientConnected(null, _connectEventArgs);
             }
-            return tcs.Task;
+            return _connectTcs.Task;
         }
 
 
@@ -52,46 +73,34 @@ namespace Remact.Net.TcpStream
         /// </summary>
         private void OnClientConnected(object sender, SocketAsyncEventArgs e)
         {
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
-            var tcs = (TaskCompletionSource<bool>)e.UserToken;
             try
             {
                 if (!_disposed && e.SocketError == SocketError.Success)
                 {
-                    tcs.TrySetResult(true);
+                    _connectTcs.TrySetResult(true);
                 }
                 else
                 {
-                    LatestException = new IOException("socket error (" + e.SocketError.ToString() + ") when connecting to " + _connectEventArgs.RemoteEndPoint);
-                    tcs.TrySetException(LatestException);
+                    LatestException = new IOException("socket error (" + e.SocketError.ToString() + ") when connecting to " + RemoteEndPoint);
+                    _connectTcs.TrySetException(LatestException);
                 }
             }
             catch (Exception ex)
             {
                 Dispose();
                 LatestException = ex;
-                tcs.TrySetException(LatestException);
-            }
-        }
-
-        private void OnTimeoutExpired(object state)
-        {
-            var tcs = (TaskCompletionSource<bool>)state;
-            var ex = new IOException("timeout when connecting to "+ _connectEventArgs.RemoteEndPoint);
-            if (tcs.TrySetException(LatestException))
-            {
-                LatestException = ex;
+                _connectTcs.TrySetException(LatestException);
             }
         }
 
         protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             if (disposing && _connectEventArgs != null)
             {
                 _connectEventArgs.Dispose();
                 _connectEventArgs = null;
             }
-            base.Dispose(disposing);
         }
     }
 }

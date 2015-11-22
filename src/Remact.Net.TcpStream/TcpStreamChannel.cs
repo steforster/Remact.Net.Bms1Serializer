@@ -2,6 +2,7 @@ using System;
 using System.Net.Sockets;
 using System.IO;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace Remact.Net.TcpStream
 {
@@ -38,6 +39,10 @@ namespace Remact.Net.TcpStream
                 throw new ArgumentNullException("clientSocket");
             }
             ClientSocket = clientSocket;
+            if (clientSocket.Connected)
+            {
+                RemoteEndPoint = clientSocket.RemoteEndPoint;
+            }
         }
 
         /// <summary>
@@ -101,6 +106,11 @@ namespace Remact.Net.TcpStream
         /// </summary>/
         public Exception LatestException { get; internal set; }
 
+        /// <summary>
+        /// The remote endpoint address or null, when unknown.
+        /// </summary>
+        public EndPoint RemoteEndPoint { get; protected set; }
+
 
         // Starts the ReceiveEventArgs for next incoming data on server- or client side. Does not block.
         // Returns false, when socket is closed.
@@ -139,9 +149,15 @@ namespace Remact.Net.TcpStream
                 do
                 {
                     int receivedBytes = e.BytesTransferred;
-                    if (e.SocketError != SocketError.Success || receivedBytes <= 0)
+                    if (e.SocketError != SocketError.Success)
                     {
-                        OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when receiving from " + e.RemoteEndPoint), null);
+                        OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when receiving from " + RemoteEndPoint), null);
+                        return;
+                    }
+
+                    if (receivedBytes <= 0)
+                    {
+                        OnSurpriseDisconnect(new IOException("socket closed when receiving from " + RemoteEndPoint), null);
                         return;
                     }
 
@@ -209,8 +225,16 @@ namespace Remact.Net.TcpStream
             var tcs = (TaskCompletionSource<bool>)e.UserToken;
             try
             {
-                if (e.SocketError == SocketError.Success && e.BytesTransferred == e.Count)
+                if (e.SocketError != SocketError.Success)
                 {
+                    OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when sending to " + RemoteEndPoint), tcs);
+                }
+                else if (e.BytesTransferred == 0 || e.BytesTransferred != e.Count)
+                {
+                    OnSurpriseDisconnect(new IOException("socket closed. " + e.BytesTransferred + " of " + e.Count + " bytes sent to " + RemoteEndPoint), tcs);
+                }
+                else
+                { 
                     int currentCount = (int)_tcpStreamOutgoing.Position;
                     _tcpStreamOutgoing.Position = 0;
                     if (e.Count == currentCount)
@@ -219,12 +243,8 @@ namespace Remact.Net.TcpStream
                     }
                     else
                     {
-                        tcs.TrySetException(new InvalidOperationException("changed stream position from "+ e.Count + " to "+ currentCount + " when asynchronously sending to " + e.RemoteEndPoint));
+                        tcs.TrySetException(new InvalidOperationException("changed stream position from "+ e.Count + " to "+ currentCount + " when asynchronously sending to " + RemoteEndPoint));
                     }
-                }
-                else
-                {
-                    OnSurpriseDisconnect(new IOException("socket error (" + e.SocketError.ToString() + ") when sending to " + e.RemoteEndPoint), tcs);
                 }
             }
             catch (Exception ex)
@@ -235,11 +255,14 @@ namespace Remact.Net.TcpStream
 
         private void OnSurpriseDisconnect(Exception exception, TaskCompletionSource<bool> tcs)
         {
-            Dispose();
-            LatestException = exception;
-            if (tcs != null)
+            if (!_disposed)
             {
-                tcs.TrySetException(exception);
+                Dispose();
+                LatestException = exception;
+                if (tcs != null)
+                {
+                    tcs.TrySetException(exception);
+                }
             }
 
             if (_onChannelDisconnectedAction != null)
@@ -267,25 +290,18 @@ namespace Remact.Net.TcpStream
             if (disposing && !_disposed)
             {
                 _disposed = true;
-                if (_receiveEventArgs != null)
+                if (ClientSocket != null)
                 {
-                    _receiveEventArgs.Dispose();
-                }
-
-                if (_sendEventArgs != null)
-                {
-                    _sendEventArgs.Dispose();
-                }
-
-                if (ClientSocket != null && ClientSocket.Connected)
-                {
-                    try
+                    if (ClientSocket.Connected)
                     {
-                        ClientSocket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (Exception shutdownException)
-                    {
-                        LatestException = shutdownException;
+                        try
+                        {
+                            ClientSocket.Shutdown(SocketShutdown.Both);
+                        }
+                        catch (Exception shutdownException)
+                        {
+                            LatestException = shutdownException;
+                        }
                     }
 
                     try
@@ -298,6 +314,16 @@ namespace Remact.Net.TcpStream
                     }
 
                     ClientSocket = null;
+                }
+
+                if (_receiveEventArgs != null)
+                {
+                    _receiveEventArgs.Dispose();
+                }
+
+                if (_sendEventArgs != null)
+                {
+                    _sendEventArgs.Dispose();
                 }
 
                 if (_tcpStreamIncoming != null)
