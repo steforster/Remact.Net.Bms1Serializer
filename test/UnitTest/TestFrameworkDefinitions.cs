@@ -43,6 +43,11 @@ namespace Microsoft.VisualStudio.TestTools.UnitTesting
     public class TestMethod : System.Attribute
     {
     }
+
+    public class TestCleanup : System.Attribute
+    {
+        // Called after each TestMethod
+    }
 }
 
 #endif

@@ -56,7 +56,7 @@
         }
 
 
-        public bool ReadBlocks(Func<IBms1InternalReader, IBms1Dto> blockFactory)
+        public List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T : IBms1Dto
         {
             if (blockFactory == null)
             {
@@ -65,13 +65,24 @@
             
             int count = Internal.CollectionElementCount; // -1 = no collection attribute
             int readCount = -1;
+            List<T> list;
+
+            if (count > 0)
+            {
+                list = new List<T>(count);
+            }
+            else
+            {
+                list = new List<T>();
+            }
+
             if (!Internal.EndOfBlock && Internal.IsBlockType && count >= 0)
             {
                 readCount = 0;
                 do
                 {
                     var blockDto = blockFactory(Internal);
-                    ////////////_messageReader.ReadBlock(() => blockDto.ReadFromBms1Stream(this));
+                    list.Add(blockDto);
                     readCount++;
                 }
                 while (!Internal.EndOfBlock && Internal.IsBlockType && readCount < count);
@@ -81,7 +92,7 @@
             {
                 throw Internal.Bms1Exception("cannot read block collection");
             }
-            return true;
+            return list;
         }
 
         

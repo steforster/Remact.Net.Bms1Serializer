@@ -75,7 +75,7 @@ namespace Remact.Net.TcpStream
         {
             try
             {
-                if (!_disposed && e.SocketError == SocketError.Success)
+                if (!_disposed && e.SocketError == SocketError.Success && ClientSocket.Connected)
                 {
                     _connectTcs.TrySetResult(true);
                 }

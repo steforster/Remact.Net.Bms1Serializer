@@ -3,12 +3,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>10.0.0</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2E730C8E-AD52-4030-8360-0A1B90460748}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>NUnitTest</RootNamespace>
     <AssemblyName>NUnitTest</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,7 +30,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="nunit.framework">
-      <Private>False</Private>
+      <Package>nunit</Package>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -39,13 +38,20 @@
     <Compile Include="..\..\src\Remact.Net.Bms1Serializer\Properties\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Bms1TestFrameworkDefinitions.cs" />
+    <Compile Include="MessageContracts.cs" />
+    <Compile Include="MessageTest.cs" />
+    <Compile Include="TcpClientServerTest.cs" />
+    <Compile Include="TestFrameworkDefinitions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <ProjectReference Include="..\..\src\Remact.Net.Bms1Serializer\Remact.Net.Bms1Serializer.csproj">
       <Project>{658FF815-D635-497E-BA72-F6A9D22692CE}</Project>
       <Name>Remact.Net.Bms1Serializer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\Remact.Net.TcpStream\Remact.Net.TcpStream.csproj">
+      <Project>{2F6C2E7A-6372-4020-810D-A23F9D47E9AB}</Project>
+      <Name>Remact.Net.TcpStream</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>
