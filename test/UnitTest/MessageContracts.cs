@@ -96,7 +96,7 @@ namespace Remact.Net.Bms1UnitTest
 
 
     /// <summary>
-    /// A streamable, derieved class.
+    /// A streamable, derieved class. Demonstrates an older sender and a newer receiver.
     /// </summary>
     public class VersionPLC : VersionBase
     {
@@ -115,7 +115,7 @@ namespace Remact.Net.Bms1UnitTest
                     dto.CpuType = reader.ReadEnum<CpuType>();
                     if (!reader.Internal.EndOfBlock)
                     {
-                        // starting with V.2, more data is transferred. In V.1, the AdditionaInfo is set to "None"
+                        // starting with V.2, more data is transferred. When sender has V.1, AdditionaInfo is "None".
                         dto.AdditionaInfo = reader.ReadString();
                     }
                     return dto;
@@ -145,11 +145,13 @@ namespace Remact.Net.Bms1UnitTest
 
     /// <summary>
     /// Another streamable, derieved class. This class contains a .NET system library type and streams it using extension methods.
+    /// Demonstrates a new sender and an older receiver.
     /// </summary>
     public class VersionDotNet : VersionBase
     {
         public const int Bms1BlockTypeId = 101;
         public Version Version;
+        public string AdditionaInfo = "None"; // not transferred before V.2
 
         internal static VersionDotNet CreateFromBms1Stream(IBms1Reader reader)
         {
@@ -157,6 +159,7 @@ namespace Remact.Net.Bms1UnitTest
                 (dto) =>
                 {
                     dto.Version = MessageExtensions.ReadFromBms1Stream(null, reader);
+                    // Intentionally, we do not read AdditionalInfo. This simulates a new sender and an older receiver;
                     return dto;
                 });
         }
@@ -166,6 +169,7 @@ namespace Remact.Net.Bms1UnitTest
             writer.WriteBlock(Bms1BlockTypeId, () =>
                 {
                     Version.WriteToBms1Stream(writer);
+                    writer.WriteString(AdditionaInfo); // not sent before V.2
                 });
         }
     }

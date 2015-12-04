@@ -61,11 +61,11 @@ namespace Remact.Net.Bms1UnitTest
                 ApplicationName = "MyApp",
                 InterfaceName = "MyInterface",
                 InterfaceVersion = 123,
-                ApplicationVersion = new VersionDotNet { Version = new Version(1, 2, 3, 4) }
+                ApplicationVersion = new VersionDotNet { Version = new Version(1, 2, 3, 4), AdditionaInfo = "more written" }
             };
 
             _serializer.WriteMessage(_stream, request.WriteToBms1Stream);
-            AssertBytesWritten(51);
+            AssertBytesWritten(65);
 
 
             // Read and verify data ----------------------------------------
@@ -73,8 +73,9 @@ namespace Remact.Net.Bms1UnitTest
             Assert.AreEqual(2, _serializer.ReadMessageStart(_stream));
             var reply = _serializer.ReadMessage(IdentificationMessage.ReadFromBms1Stream);
             Assert.IsNotNull(reply);
+            (request.ApplicationVersion as VersionDotNet).AdditionaInfo = "None"; // the AdditionaInfo is not read from stream
             AssertEqual(request, reply);
-            Assert.AreEqual(51, _stream.Position);
+            Assert.AreEqual(65, _stream.Position);
         }
 
 
