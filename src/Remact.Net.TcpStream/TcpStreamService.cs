@@ -17,17 +17,17 @@ namespace Remact.Net.TcpStream
 
 
         /// <summary>
-        /// Constructs an instance of the service and starts listening for incoming connections on any ip address.
+        /// Constructs an instance of the service and starts listening for incoming connections on any local ethernet adapter.
         /// </summary>
         /// <param name="port">The port number for connect requests.</param>
-        /// <param name="onClientConnected">The callback is fired, when a client connects to the service.</param>
-        public TcpStreamService(int port, Action<TcpStreamChannel> onClientConnected)
+        /// <param name="onClientAccepted">The callback is fired, when the service accepts a new client connection.</param>
+        public TcpStreamService(int port, Action<TcpStreamChannel> onClientAccepted)
         {
-            Initialize(new IPEndPoint(IPAddress.Any, port), onClientConnected);
+            Initialize(new IPEndPoint(IPAddress.Any, port), onClientAccepted);
         }
 
         /// <summary>
-        /// Constructs an instance of the service and starts listening for incoming connections on designated endpoint.
+        /// Constructs an instance of the service and starts listening for incoming connections on a designated ethernet adapter.
         /// </summary>
         /// <param name="endpoint">The ethernet adapter and port number for connect requests.</param>
         /// <param name="onClientAccepted">The callback is fired, when the service accepts a new client connection.</param>
@@ -112,6 +112,9 @@ namespace Remact.Net.TcpStream
 
         private bool _disposed;
 
+        /// <summary>
+        /// Disposes the underlying listener socket and all reserved resources.
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);

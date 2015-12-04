@@ -26,6 +26,9 @@ namespace Remact.Net.TcpStream
         private SocketAsyncEventArgs _sendEventArgs;
         private TcpStreamOutgoing _tcpStreamOutgoing;
 
+        /// <summary>
+        /// Gets the underlying local socket for the connection between client and service.
+        /// </summary>
         public Socket ClientSocket { get; private set; }
 
         /// <summary>
@@ -46,10 +49,11 @@ namespace Remact.Net.TcpStream
         }
 
         /// <summary>
-        /// Starts the IO streams using the given socket. The socket must have been opened by a service or a client.
+        /// Starts read/write communication on the underlaying, connected socket. 
+        /// Start must be called after a TcpStreamService has fired the onClientAccepted callback -or- after the TcpStreamClient has successfully executed <see cref="TcpStreamClient.ConnectAsync(string,int)"/>.
         /// </summary>
         /// <param name="onDataReceived">The action is called back (on a threadpool thread), when a message start is received.</param>
-        /// <param name="onChannelDisconnected">The action is called back, when the channel is disconnected from remote. May be null.</param>
+        /// <param name="onChannelDisconnected">The action is called back (on a threadpool thread), when the channel is disconnected from remote. May be null.</param>
         /// <param name="bufferSize">Defines size of the receive buffer and minimum size of the send buffer. Default = 1500 bytes (one ethernet frame).</param>
         public void Start(Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize=1500)
         {
@@ -76,7 +80,7 @@ namespace Remact.Net.TcpStream
             _receiveEventArgs = new SocketAsyncEventArgs();
             _receiveEventArgs.SetBuffer(new byte[_bufferSize], 0, _bufferSize);
             _receiveEventArgs.Completed += OnDataReceived;
-            _tcpStreamIncoming = new TcpStreamIncoming(StartAsyncRead);
+            _tcpStreamIncoming = new TcpStreamIncoming(StartAsyncRead, ()=> ClientSocket.Available);
             _userReadsMessage = false;
 
             _sendEventArgs = new SocketAsyncEventArgs();
@@ -97,7 +101,7 @@ namespace Remact.Net.TcpStream
         public TcpStreamOutgoing OutputStream { get { return _tcpStreamOutgoing; } }
 
         /// <summary>
-        /// Returns true, when socket is connected. False otherwise.
+        /// Returns true, when the socket is connected. False otherwise.
         /// </summary>
         public bool IsConnected { get { return !_disposed && ClientSocket.Connected; } }
 
@@ -110,6 +114,13 @@ namespace Remact.Net.TcpStream
         /// The remote endpoint address or null, when unknown.
         /// </summary>
         public EndPoint RemoteEndPoint { get; protected set; }
+
+        /// <summary>
+        /// The UserContext object may be used to provide context information in onDataReceived and onChannelDisconnected callback handlers.
+        /// These handlers run on a threadpool thread. Therefore, only threadsafe members of the context may be accessed.
+        /// The UserContext remains untouched by the library.
+        /// </summary>
+        public object UserContext { get; set; }
 
 
         // Starts the ReceiveEventArgs for next incoming data on server- or client side. Does not block.
@@ -185,8 +196,6 @@ namespace Remact.Net.TcpStream
             {
                 OnSurpriseDisconnect(ex, null);
             }
-            //}
-            //catch (OperationCanceledException) { }
         }
 
 
@@ -200,7 +209,7 @@ namespace Remact.Net.TcpStream
                 {
                     _sendEventArgs.SetBuffer(messageBuffer, 0, count);
                     _sendEventArgs.UserToken = tcs;
-                    // when data is sent, call OnDataFlushed:
+                    // when data is sent, set _tcpStreamOutgoing.Position to 0:
                     if (!ClientSocket.SendAsync(_sendEventArgs))
                     {
                         OnDataSent(null, _sendEventArgs);
@@ -222,6 +231,11 @@ namespace Remact.Net.TcpStream
         // asynchronously called on a threadpool thread:
         private void OnDataSent(object sender, SocketAsyncEventArgs e)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             var tcs = (TaskCompletionSource<bool>)e.UserToken;
             try
             {
@@ -278,6 +292,9 @@ namespace Remact.Net.TcpStream
 
         protected bool _disposed;
 
+        /// <summary>
+        /// Shuts down the underlying socket. Disposes all reserved resources.
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);

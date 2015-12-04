@@ -13,17 +13,17 @@
         Int32 = 50,
         Int64 = 60,  // 64 bit, signed
         Enum = 70,  //  8...64 bit
-        Bitset = 80,  //  8..128 bit
+        Bitset = 80,  //  8..128 bit ?????
         Decimal = 90, //128 bit
         Float = 100, // 32 bit
         Double = 110, // 64 bit
         Date = 120,
         Time = 130,
-        Char = 140, // all 10' tags must be defined up to 140, see 'TagReader' !
+        String = 140, // all 10' tags must be defined up to 140, see 'TagReader' !
 
         // Known framing tags.
         MessageStart = 245,
-        BlockStart = 246,
+        BlockStart = 246, // includes also 247 (with block type id)
         NullBlock = 248,
         BlockEnd = 249,
         MessageFooter = 251,
@@ -59,5 +59,12 @@
         public const int L4 = 4;
         public const int L8 = 8;
         public const int L16 = 9;
+    }
+
+    public class Bms1Length
+    {
+        public const int None = -1;
+        public const int Open = -2;
+        public const int Undefined = -3;
     }
 }

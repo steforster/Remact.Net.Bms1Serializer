@@ -40,23 +40,18 @@
 
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        public T ReadBlock<T>(Func<IBms1Reader, T> readDto)
+        public T ReadBlock<T>(Func<T, T> readDto) where T : new()
         {
             if (Internal.IsCollection)
             {
                 throw Internal.Bms1Exception("cannot read block");
             }
 
-            if (readDto == null)
-            {
-                return _messageReader.ReadBlock<T>(null); // skip unknown block type
-            }
-
-            return _messageReader.ReadBlock(() => readDto(this));
+            return _messageReader.ReadBlock(readDto); // skip unknown block type when null
         }
 
 
-        public List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T : IBms1Dto
+        public List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T : new()
         {
             if (blockFactory == null)
             {
@@ -64,7 +59,6 @@
             }
             
             int count = Internal.CollectionElementCount; // -1 = no collection attribute
-            int readCount = -1;
             List<T> list;
 
             if (count > 0)
@@ -76,19 +70,15 @@
                 list = new List<T>();
             }
 
-            if (!Internal.EndOfBlock && Internal.IsBlockType && count >= 0)
+            var readCount = 0;
+            while (Internal.TagEnum == Bms1Tag.BlockStart && readCount < count)
             {
-                readCount = 0;
-                do
-                {
-                    var blockDto = blockFactory(Internal);
-                    list.Add(blockDto);
-                    readCount++;
-                }
-                while (!Internal.EndOfBlock && Internal.IsBlockType && readCount < count);
+                var blockDto = blockFactory(Internal);
+                list.Add(blockDto);
+                readCount++;
             }
-            
-            if (readCount < 0)
+
+            if (readCount < count)
             {
                 throw Internal.Bms1Exception("cannot read block collection");
             }
@@ -370,7 +360,7 @@
             if (!Internal.EndOfBlock)
             {
                 string data;
-                if (Internal.TagEnum == Bms1Tag.Char)
+                if (Internal.TagEnum == Bms1Tag.String)
                 {
                     if (Internal.IsArrayData)
                     {
@@ -418,7 +408,7 @@
             char data = '\0';
             if (!Internal.EndOfBlock)
             {
-                if (Internal.TagEnum == Bms1Tag.Char && !Internal.IsArrayData)
+                if (Internal.TagEnum == Bms1Tag.String && !Internal.IsArrayData)
                 {
                     ok = ConvertToChar(ref data);
                 }
@@ -465,6 +455,32 @@
                 return true;
             }
             return false;
+        }
+
+
+        public T ReadEnum<T>() where T : struct
+        {
+            if (Internal.IsSingleValueOfType(Bms1Tag.Enum))
+            {
+                Int64 data;
+                switch (Internal.DataLength)
+                {
+                    case 0: data = 0;                  Internal.ReadAttributes(); break;
+                    case 1: data = Stream.ReadSByte(); Internal.ReadAttributes(); break;
+                    case 2: data = Stream.ReadInt16(); Internal.ReadAttributes(); break;
+                    case 4: data = Stream.ReadInt32(); Internal.ReadAttributes(); break;
+                    case 8: data = Stream.ReadInt64(); Internal.ReadAttributes(); break;
+                    default: throw Internal.Bms1Exception("cannot read Enum");
+                }
+
+                if (!typeof(T).IsEnum)
+                {
+                    throw Internal.Bms1Exception("cannot read type '" + typeof(T).Name + "' as Enum");
+                }
+
+                return (T)Enum.ToObject(typeof(T), data);
+            }
+            throw Internal.Bms1Exception("cannot read Enum");
         }
 
 

@@ -16,23 +16,22 @@
         }
 
         #region IBms1MessageWriter Members
-        
 
-        public void WriteMessage(BinaryWriter binaryWriter, int blockTypeId, Action dtoAction)
+
+        public void WriteMessage(Bms1Writer writer, Action<IBms1Writer> writeDtoAction)
         {
-            Stream = binaryWriter;
+            Stream = writer.Stream;
             Stream.Write((byte)Bms1Tag.MessageStart);
             Stream.Write((uint)0x544D4201);
 
-            WriteBlock(binaryWriter, blockTypeId, dtoAction);
+            writeDtoAction(writer);
             
             Stream.Write((byte)Bms1Tag.MessageEnd);
         }
 
 
-        public void WriteBlock(BinaryWriter binaryWriter, int blockTypeId, Action dtoAction)
+        public void WriteBlock(IBms1Writer writer, int blockTypeId, Action writeDtoAction)
         {
-            Stream = binaryWriter;
             WriteAttributes();
             if (blockTypeId < 0)
             {
@@ -40,21 +39,22 @@
             }
             else
             {
-                Stream.Write((byte)(Bms1Tag.BlockStart + 1));
+                Stream.Write((byte)(Bms1Tag.BlockStart + 1)); // 247
                 Stream.Write((UInt16)blockTypeId);
             }
-            
-            dtoAction();
+
+            writeDtoAction();
             
             Stream.Write((byte)Bms1Tag.BlockEnd);
             ClearAttributes();
         }
 
+
         private void ClearAttributes()
         {
             ObjectName = null;
             ObjectType = null;
-            CollectionElementCount = -1;
+            CollectionElementCount = Bms1Length.None; // -1
             NameValueAttributes = null;
             NamespaceAttributes = null;
             IsCharacterType = false;
@@ -72,7 +72,7 @@
             if (CollectionElementCount >= 0)
             {
                 WriteDataUInt((byte)Bms1Attribute.Collection, (UInt32)CollectionElementCount);
-                CollectionElementCount = -1;
+                CollectionElementCount = Bms1Length.None;
             }
 
             //ObjectName = null;
@@ -140,9 +140,13 @@
                 Stream.Write((byte)(tag + Bms1LengthSpec.Byte));
                 Stream.Write((byte)(dataLength));
             }
+            else if (dataLength == Bms1Length.Open) // -2 = zero termination
+            {
+                Stream.Write((byte)(tag + Bms1LengthSpec.ZeroTerminated)); 
+            }
             else
             {
-                Stream.Write((byte)(tag + Bms1LengthSpec.ZeroTerminated)); // -1 = zero termination
+                throw new Bms1Exception("undefined dataLength=" + dataLength);
             }
         }
         

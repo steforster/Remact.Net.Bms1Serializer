@@ -14,7 +14,6 @@
         bool    IsSingleValueOfType(Bms1Tag tag); // !EndOfBlock && TagEnum==tag && !IsArrayData
 
         bool    IsCharacterType { get; }
-        bool    IsBlockType { get; }
         int     BlockTypeId  { get; } // -1 = no id
         int     BlockNestingLevel { get; } // 1 = base block, 0 = message
 
@@ -23,7 +22,7 @@
         List<string> NameValueAttributes { get; }
         List<string> NamespaceAttributes { get; }
 
-        int     DataLength { get; } // length of following data in bytes, -1 = zero terminated, 0 = zero or empty array
+        int     DataLength { get; } // length of following data in bytes, -2 = zero terminated, 0 = zero or empty array
         bool    IsArrayData { get; } // data is e.g. an array of bytes, ints...
 
         void    ReadAttributes(); // Reads attributes for next value. Does not read over end of block. 
@@ -42,10 +41,10 @@
         int ReadMessageStart(BinaryReader binaryReader);
 
         // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
-        T ReadMessage<T>(Func<T> readMessageDto);
+        T ReadMessage<T>(IBms1Reader reader, Func<IBms1Reader, T> readMessageDto) where T : new();
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        T ReadBlock<T>(Func<T> readDto);
+        T ReadBlock<T>(Func<T, T> readDto) where T : new();
     }
     
     
@@ -62,7 +61,7 @@
         List<string> NamespaceAttributes { get; set; }
 
         void WriteAttributesAndTag(Bms1Tag tag); // Does not add a length specifier to the tag
-        void WriteAttributesAndTag(Bms1Tag tag, int dataLength); // Adds length specifier and length according to data length: >= 256: writes 2 bytes data length / >= 0: writes 1 byte data length / -1 = zero terminated (no data length)
+        void WriteAttributesAndTag(Bms1Tag tag, int dataLength); // Adds length specifier and length according to data length: >= 256: writes 2 bytes data length / >= 0: writes 1 byte data length / -2 = zero terminated (no data length)
         
         // Does not write attributes:
         void WriteDataString(Bms1Tag tag, string data);
@@ -75,7 +74,7 @@
 
     internal interface IMessageWriter
     {
-        void WriteMessage(BinaryWriter binaryWriter, int blockTypeId, Action dtoAction);
-        void WriteBlock  (BinaryWriter binaryWriter, int blockTypeId, Action dtoAction);
+        void WriteMessage(Bms1Writer writer, Action<IBms1Writer> writeDtoAction);
+        void WriteBlock(IBms1Writer writer, int blockTypeId, Action writeDtoAction);
     }
 }

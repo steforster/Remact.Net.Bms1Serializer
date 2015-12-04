@@ -18,19 +18,26 @@ namespace Remact.Net.TcpStream
         private int _bufferLength;
         private int _nextByteInBuffer;
         private Func<bool> _startAsyncRead;
+        private Func<long> _getAvailableByteCountInChannel;
         private ManualResetEventSlim _resetEvent;
 
         /// <summary>
-        /// Creates a readable stream using Async IO.
+        /// Creates a readable stream that supports async IO.
         /// </summary>
         /// <param name="startAsyncRead">A function to start the next asynchronous read operation. It must return false, when socket is closed.</param>
-        public TcpStreamIncoming(Func<bool> startAsyncRead)
+        /// <param name="getAvailableBytesInChannel">A function to get the count of available bytes for read in the the channel (except the bytes in the buffer passed to <see cref="DataReceived"/>).</param>
+        public TcpStreamIncoming(Func<bool> startAsyncRead, Func<long> getAvailableByteCountInChannel)
         {
             if (startAsyncRead == null)
             {
                 throw new ArgumentNullException("startAsyncRead");
             }
+            if (getAvailableByteCountInChannel == null)
+            {
+                throw new ArgumentNullException("getAvailableByteCountInChannel");
+            }
             _startAsyncRead = startAsyncRead;
+            _getAvailableByteCountInChannel = getAvailableByteCountInChannel;
             _resetEvent = new ManualResetEventSlim();
         }
 
@@ -74,8 +81,8 @@ namespace Remact.Net.TcpStream
         }
 
         /// <summary>
-        /// Return the next byte on the user thread. May wait asynchronously until new data has arrived.
-        /// Returns -1 when the stream is closed.
+        /// Return the next byte from stream. May block until new data has arrived.
+        /// Returns -1 when stream is closed.
         /// </summary>
         public override int ReadByte()
         {
@@ -91,9 +98,12 @@ namespace Remact.Net.TcpStream
         }
 
         /// <summary>
-        /// Returns the count of bytes read on the user thread. May wait asynchronously until new data has arrived.
-        /// Returns 0 when the stream is closed.
+        /// Reads the specified count of bytes from the stream. May block until new data has arrived.
         /// </summary>
+        /// <param name="userBuffer">The destination buffer to copy the received data.</param>
+        /// <param name="offset">Copying starts at the specified offset in the userBuffer.</param>
+        /// <param name="count">The requested count of bytes to copy.</param>
+        /// <returns>The count of bytes read. When the stream is closed, the returned count is less than the requested count.</returns>
         public override int Read(byte[] userBuffer, int offset, int count)
         {
             int totalCount = 0;
@@ -125,17 +135,24 @@ namespace Remact.Net.TcpStream
             return totalCount;
         }
 
+        /// <summary>
+        /// Gets the count of bytes available in the local buffers of the stream.
+        /// </summary>
+        public override long Length
+        {
+            get
+            {
+                var rest = _bufferLength - _nextByteInBuffer;
+                return _getAvailableByteCountInChannel() + rest;
+            }
+        }
+
 
         #region Not supported functions
 
         public override void Flush()
         {
             throw new NotSupportedException();
-        }
-
-        public override long Length
-        {
-            get { throw new NotSupportedException(); }
         }
 
         public override long Position

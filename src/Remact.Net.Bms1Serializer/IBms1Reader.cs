@@ -9,8 +9,8 @@
         IBms1InternalReader Internal { get; }
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        T ReadBlock<T>(Func<IBms1Reader,T> readDto);
-        List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T: IBms1Dto;
+        T ReadBlock<T>(Func<T, T> readDto) where T : new();
+        List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T : new();
 
         // check Internal.EndOfBlock before calling Read... method.
         bool ReadBool();
@@ -21,6 +21,7 @@
         Int32 ReadInt32();
         Int64 ReadInt64();
 
+        T ReadEnum<T>() where T : struct;
         Nullable<T> ReadNullable<T>() where T : struct;
 
         byte[] ReadByteArray();

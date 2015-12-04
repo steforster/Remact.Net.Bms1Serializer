@@ -8,8 +8,9 @@
     {
         IBms1InternalWriter Internal { get; }
 
-        void WriteBlock(IBms1Dto blockDto);
-        void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId);
+        void WriteBlock(UInt16 blockTypeId, Action writeDtoAction); // writeDto==null writes null
+        void WriteBlock(Action writeDtoAction); // no ID; writeDto==null writes null
+        //void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId);
 
         void WriteBool(bool data);
         void WriteBool(bool? data);
@@ -38,6 +39,8 @@
         void WriteInt64(Int64 data);
         void WriteInt64Array(IEnumerable<Int64> data);
         void WriteInt64(Int64? data);
+
+        void WriteEnum(Enum data);
 
         void WriteUnicode(char data);
         void WriteUnicode(char? data);

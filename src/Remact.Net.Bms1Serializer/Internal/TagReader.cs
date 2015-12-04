@@ -24,7 +24,7 @@
         
         public bool IsArrayData;  // DataLength(in bytes) contains an array of TagType
 
-        public int DataLength; // -1 = zero terminated, -3 = undefined length
+        public int DataLength; // -2 = zero terminated, -3 = undefined length
 
         public int BlockTypeId; // after BlockStart or NullBlock or BaseBlockDefinition, -1 when no type id available
 
@@ -54,7 +54,7 @@
             TagEnum = Bms1Tag.Attribute;
             ObjectName = null;
             ObjectType = null;
-            CollectionElementCount = -1;
+            CollectionElementCount = Bms1Length.None; // -1
             CollectionElementBaseType = -1;
             NameValue = null;
             Namespace = null;
@@ -86,9 +86,9 @@
             else if (TagByte < 170) // Values
             {
                 EvaluateDataLength(stream);
-                if (DataLength == -3)
+                if (DataLength == Bms1Length.Undefined)
                 {
-                    throw new Bms1Exception("unknown data length specifier 3");
+                    throw new Bms1Exception("undefined data length specifier 3");
                 }
 
                 if (TagByte < 150)
@@ -102,10 +102,10 @@
                 EvaluateDataLength(stream);
 
                 TagEnum = Bms1Tag.Attribute;
-                var attributeGroup = TagByte;
+                var attributeGroup = TagByte; // special handling for 240 and above
                 if (TagByte < 240)
                 {
-                    attributeGroup -= _lengthSpecifier;
+                    attributeGroup -= _lengthSpecifier; // normal groups below 240
                 }
 
                 switch (attributeGroup)
@@ -135,27 +135,23 @@
                         break;
 
                     case 230:
+                        if (_lengthSpecifier == 3) // 233
                         {
-                            if (_lengthSpecifier == 0)
+                            CollectionElementCount = Bms1Length.Open; // open collection
+                        }
+                        else if (_lengthSpecifier <= 4) // 230, 231, 232, 234
+                        {
+                            DataLength = _lengthSpecifier;
+                            var len = ReadDataUInt(stream);
+                            if (len > Int32.MaxValue) // TODO Max
                             {
-                                CollectionElementBaseType = (int)stream.ReadUInt16();
+                                throw new Bms1Exception("collection length " + len + " out of bounds for attribute " + TagByte);
                             }
-                            else if (_lengthSpecifier == 3)
-                            {
-                                CollectionElementCount = -2; // TODO open collection
-                            }
-                            else if (_lengthSpecifier <= 4)
-                            {
-                                CollectionElementCount = (int)ReadDataUInt(stream);
-                                if (CollectionElementCount < 0) // TODO Max
-                                {
-                                    throw new Bms1Exception("array length out of bounds: " + CollectionElementCount);
-                                }
-                            }
-                            else
-                            {
-                                SkipData(stream);
-                            }
+                            CollectionElementCount = (int)len; // >=0: CollectionAtribute is set.
+                        }
+                        else
+                        {
+                            SkipData(stream); // yet unknown attributes
                         }
                         break;
 
@@ -206,29 +202,29 @@
             switch (_lengthSpecifier)
             {
                 case 3:
-                    DataLength = -3; // undefined length
+                    DataLength = Bms1Length.Undefined;
                     break;
 
-                case 5:
+                case Bms1LengthSpec.ZeroTerminated: // 5
                     IsArrayData = true;
-                    DataLength = -1; // zero terminated string
+                    DataLength = Bms1Length.Open; // zero terminated string
                     break;
 
-                case 6:
+                case Bms1LengthSpec.Byte: // 6
                     IsArrayData = true;
                     DataLength = stream.ReadByte();
                     break;
 
-                case 7:
+                case Bms1LengthSpec.Int32: // 7
                     IsArrayData = true;
                     DataLength = stream.ReadInt32();
                     if (DataLength < 0)
                     {
-                        throw new Bms1Exception("unknown data length = " + DataLength);
+                        throw new Bms1Exception("invalid data length = " + DataLength + " for tag = " + TagByte);
                     }
                     break;
 
-                case 9:
+                case Bms1LengthSpec.L16: // 9
                     DataLength = 16;
                     break;
 
@@ -244,24 +240,24 @@
         {
             var len = DataLength;
             DataLength = 0;
-            if (_lengthSpecifier == 0 || len == 0)
+            if (_lengthSpecifier == Bms1LengthSpec.L0 || len == 0)
             {
                 return string.Empty;
             }
 
-            if (_lengthSpecifier == 1)
+            if (_lengthSpecifier == Bms1LengthSpec.L1)
             {
                 var b = stream.ReadByte();
                 return Convert.ToString((char)b);
             }
 
-            if (_lengthSpecifier == 2)
+            if (_lengthSpecifier == Bms1LengthSpec.L2)
             {
                 short i = stream.ReadInt16();
                 return Convert.ToString((char)i);
             }
 
-            if (_lengthSpecifier == 5 || len == -1)
+            if (_lengthSpecifier == Bms1LengthSpec.ZeroTerminated || len == Bms1Length.Open)
             {
                 if (_byteBuffer == null)
                 {
@@ -326,13 +322,18 @@
                 return;
             }
 
-            // skip zero terminated string
-            byte nextByte;
-            do
+            if (len == Bms1Length.Open)
             {
-                nextByte = stream.ReadByte();
+                // skip zero terminated string
+                byte nextByte;
+                do
+                {
+                    nextByte = stream.ReadByte();
+                }
+                while (nextByte != 0);
             }
-            while (nextByte != 0);
+
+            throw new Bms1Exception("undefined datalength " + len + " to skip.");
         }
     }
 }

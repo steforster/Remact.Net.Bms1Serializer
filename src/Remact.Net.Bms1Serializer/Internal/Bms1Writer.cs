@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
 
@@ -26,37 +27,49 @@
         }
 
         //------------------------------
-        public void WriteBlock(IBms1Dto blockDto)
+        public void WriteBlock(UInt16 blockTypeId, Action writeDtoAction)
         {
-            if (blockDto == null)
+            if (writeDtoAction == null)
             {
                 WriteNull();
             }
             else
             {
-                _messageWriter.WriteBlock(Stream, blockDto.Bms1BlockTypeId, () => blockDto.WriteToBms1Stream(this));
+                _messageWriter.WriteBlock(this, blockTypeId, writeDtoAction);
             }
         }
 
-        public void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId)
+        public void WriteBlock(Action writeDtoAction)
         {
-            if (data == null)
+            if (writeDtoAction == null)
             {
                 WriteNull();
             }
             else
             {
-                Internal.CollectionElementCount = data.Count;
-                _messageWriter.WriteBlock(Stream, baseBlockTypeId,
-                    () =>
-                    {
-                        foreach (var b in data)
-                        {
-                            WriteBlock(b);
-                        }
-                    });
+                _messageWriter.WriteBlock(this, -1, writeDtoAction);
             }
         }
+
+        //public void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId)
+        //{
+        //    if (data == null)
+        //    {
+        //        WriteNull();
+        //    }
+        //    else
+        //    {
+        //        Internal.CollectionElementCount = data.Count;
+        //        _messageWriter.WriteBlock(Stream, baseBlockTypeId,
+        //            () =>
+        //            {
+        //                foreach (var b in data)
+        //                {
+        //                    WriteBlock(b);
+        //                }
+        //            });
+        //    }
+        //}
 
         //------------------------------
         public void WriteBool(bool data)
@@ -301,9 +314,15 @@
         }
 
         //------------------------------
+        public void WriteEnum(Enum data)
+        {
+            Internal.WriteDataSInt64(Bms1Tag.Enum, (data as IConvertible).ToInt64(CultureInfo.InvariantCulture));
+        }
+
+        //------------------------------
         public void WriteUnicode(char data)
         {
-            Internal.WriteAttributesAndTag(Bms1Tag.Char + Bms1LengthSpec.L2);
+            Internal.WriteAttributesAndTag(Bms1Tag.String + Bms1LengthSpec.L2);
             Stream.Write((Int16)data);
         }
 
@@ -322,7 +341,7 @@
         //------------------------------
         public void WriteString(string data)
         {
-            Internal.WriteDataString(Bms1Tag.Char, data); // supports null
+            Internal.WriteDataString(Bms1Tag.String, data); // supports null
         }
 
         public void WriteStrings(IList<string> data)
@@ -337,7 +356,7 @@
                 Internal.WriteAttributesAndTag(Bms1Tag.BlockStart);
                 foreach (var s in data)
                 {
-                    Internal.WriteDataString(Bms1Tag.Char, s); // supports null
+                    Internal.WriteDataString(Bms1Tag.String, s); // supports null
                 }
                 Internal.WriteAttributesAndTag(Bms1Tag.BlockEnd);
             }

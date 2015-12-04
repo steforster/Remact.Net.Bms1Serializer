@@ -36,7 +36,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Internal\TagReader.cs" />
     <Compile Include="Bms1Exception.cs" />
-    <Compile Include="IBms1Dto.cs" />
     <Compile Include="IBms1Reader.cs" />
     <Compile Include="Bms1MessageSerializer.cs" />
     <Compile Include="Internal\Bms1Reader.cs" />

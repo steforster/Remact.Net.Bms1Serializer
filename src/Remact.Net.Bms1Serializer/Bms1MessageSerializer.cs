@@ -2,6 +2,8 @@ namespace Remact.Net.Bms1Serializer
 {
     using System;
     using System.IO;
+    using System.Threading;
+
     using Remact.Net.Bms1Serializer.Internal;
     
     public class Bms1MessageSerializer
@@ -39,18 +41,18 @@ namespace Remact.Net.Bms1Serializer
         }
 
         // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
-        public T ReadMessage<T>(Func<IBms1Reader,T> readMessageDto)
+        public T ReadMessage<T>(Func<IBms1Reader, T> readMessageDto) where T : new()
         {
             if (_reader == null)
             {
                 throw new InvalidOperationException("ReadMessageStart must be called first");
             }
-            
-            return _messageReader.ReadMessage(() => readMessageDto(_reader));
+
+            return _messageReader.ReadMessage<T>(_reader, readMessageDto);
         }
 
                 
-        public void WriteMessage(Stream stream, IBms1Dto messageDto)
+        public void WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
         {
             if (stream == null)
             {
@@ -70,9 +72,7 @@ namespace Remact.Net.Bms1Serializer
                 _writer.Stream = new System.IO.BinaryWriter(_writeStream);
             }
 
-            _messageWriter.WriteMessage(_writer.Stream, messageDto.Bms1BlockTypeId,
-                                      () => messageDto.WriteToBms1Stream (_writer)
-                                  );
+            _messageWriter.WriteMessage(_writer, writeDtoAction);
         }
     }
 }
