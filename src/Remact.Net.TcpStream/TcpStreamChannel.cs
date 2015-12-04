@@ -19,7 +19,7 @@ namespace Remact.Net.TcpStream
         private Action<TcpStreamChannel> _onChannelDisconnectedAction;
         private int _bufferSize;
 
-        private SocketAsyncEventArgs _receiveEventArgs;
+        protected SocketAsyncEventArgs _receiveEventArgs; // used for connecting also
         private TcpStreamIncoming _tcpStreamIncoming;
         private bool _userReadsMessage;
 
@@ -46,6 +46,7 @@ namespace Remact.Net.TcpStream
             {
                 RemoteEndPoint = clientSocket.RemoteEndPoint;
             }
+            _receiveEventArgs = new SocketAsyncEventArgs();
         }
 
         /// <summary>
@@ -77,7 +78,6 @@ namespace Remact.Net.TcpStream
             _onChannelDisconnectedAction = onChannelDisconnected;
             _bufferSize = bufferSize;
 
-            _receiveEventArgs = new SocketAsyncEventArgs();
             _receiveEventArgs.SetBuffer(new byte[_bufferSize], 0, _bufferSize);
             _receiveEventArgs.Completed += OnDataReceived;
             _tcpStreamIncoming = new TcpStreamIncoming(StartAsyncRead, ()=> ClientSocket.Available);

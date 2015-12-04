@@ -1,9 +1,7 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Remact.Net.TcpStream
@@ -14,7 +12,6 @@ namespace Remact.Net.TcpStream
     /// </summary>
     public class TcpStreamClient : TcpStreamChannel
     {
-        private SocketAsyncEventArgs _connectEventArgs;
         private TaskCompletionSource<bool> _connectTcs;
 
         /// <summary>
@@ -24,8 +21,7 @@ namespace Remact.Net.TcpStream
             : base(new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) // TcpClient(AddressFamily.InterNetwork);
         {
             ClientSocket.LingerState.Enabled = false;
-            _connectEventArgs = new SocketAsyncEventArgs();
-            _connectEventArgs.Completed += OnClientConnected;
+            _receiveEventArgs.Completed += OnClientConnected;
         }
 
         /// <summary>
@@ -81,15 +77,29 @@ namespace Remact.Net.TcpStream
         /// <param name="remoteEndpoint">The endpoint address of the remote service.</param>
         public Task ConnectAsync(EndPoint remoteEndpoint)
         {
-            RemoteEndPoint = remoteEndpoint;
-            _connectEventArgs.RemoteEndPoint = remoteEndpoint;
-            _connectTcs = new TaskCompletionSource<bool>();
-
-            if (!ClientSocket.ConnectAsync(_connectEventArgs))
+            if (_disposed)
             {
-                OnClientConnected(null, _connectEventArgs);
+                throw new ObjectDisposedException(nameof(TcpStreamClient));
             }
-            return _connectTcs.Task;
+            if (IsConnected)
+            {
+                throw new InvalidOperationException("cannot restart ConnectAsync, already connected");
+            }
+            if (_connectTcs != null)
+            {
+                throw new InvalidOperationException("cannot restart ConnectAsync, operation in progress");
+            }
+
+            RemoteEndPoint = remoteEndpoint;
+            _receiveEventArgs.RemoteEndPoint = remoteEndpoint;
+            _connectTcs = new TaskCompletionSource<bool>();
+            var task = _connectTcs.Task;
+
+            if (!ClientSocket.ConnectAsync(_receiveEventArgs))
+            {
+                OnClientConnected(null, _receiveEventArgs);
+            }
+            return task;
         }
 
 
@@ -98,33 +108,26 @@ namespace Remact.Net.TcpStream
         /// </summary>
         private void OnClientConnected(object sender, SocketAsyncEventArgs e)
         {
+            var tcs = _connectTcs;
+            _connectTcs = null;
             try
             {
                 if (!_disposed && e.SocketError == SocketError.Success && ClientSocket.Connected)
                 {
-                    _connectTcs.TrySetResult(true);
+                    _receiveEventArgs.Completed -= OnClientConnected;
+                    tcs.TrySetResult(true);
                 }
                 else
                 {
                     LatestException = new IOException("socket error (" + e.SocketError.ToString() + ") when connecting to " + RemoteEndPoint);
-                    _connectTcs.TrySetException(LatestException);
+                    tcs.TrySetException(LatestException);
                 }
             }
             catch (Exception ex)
             {
                 Dispose();
                 LatestException = ex;
-                _connectTcs.TrySetException(LatestException);
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-            if (disposing && _connectEventArgs != null)
-            {
-                _connectEventArgs.Dispose();
-                _connectEventArgs = null;
+                tcs.TrySetException(LatestException);
             }
         }
     }
