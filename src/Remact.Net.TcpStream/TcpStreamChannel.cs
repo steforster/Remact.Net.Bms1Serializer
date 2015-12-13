@@ -51,7 +51,7 @@ namespace Remact.Net.TcpStream
 
         /// <summary>
         /// Starts read/write communication on the underlaying, connected socket. 
-        /// Start must be called after a TcpStreamService has fired the onClientAccepted callback -or- after the TcpStreamClient has successfully executed <see cref="TcpStreamClient.ConnectAsync(string,int)"/>.
+        /// Start must be called after a TcpStreamService has fired the onClientAccepted callback.
         /// </summary>
         /// <param name="onDataReceived">The action is called back (on a threadpool thread), when a message start is received.</param>
         /// <param name="onChannelDisconnected">The action is called back (on a threadpool thread), when the channel is disconnected from remote. May be null.</param>

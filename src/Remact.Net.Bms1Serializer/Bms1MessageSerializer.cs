@@ -16,8 +16,8 @@ namespace Remact.Net.Bms1Serializer
         private Bms1Writer _writer;
         private IMessageWriter _messageWriter;
         
-        // returns next message block type
-        public int ReadMessageStart(Stream stream)
+        // returns attributes of the next message block
+        public IBms1InternalReader ReadMessageStart(Stream stream)
         {
             if (stream == null)
             {

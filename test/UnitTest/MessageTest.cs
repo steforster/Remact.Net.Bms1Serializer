@@ -44,7 +44,7 @@ namespace Remact.Net.Bms1UnitTest
 
             // Read and verify data ----------------------------------------
             _stream.Position = 0;
-            Assert.AreEqual(1, _serializer.ReadMessageStart(_stream));
+            Assert.AreEqual(1, _serializer.ReadMessageStart(_stream).BlockTypeId);
             var reply = _serializer.ReadMessage(IdleMessage.ReadFromBms1Stream);
             Assert.IsNotNull(reply);
             Assert.AreEqual(10, _stream.Position);
@@ -70,7 +70,7 @@ namespace Remact.Net.Bms1UnitTest
 
             // Read and verify data ----------------------------------------
             _stream.Position = 0;
-            Assert.AreEqual(2, _serializer.ReadMessageStart(_stream));
+            Assert.AreEqual(2, _serializer.ReadMessageStart(_stream).BlockTypeId);
             var reply = _serializer.ReadMessage(IdentificationMessage.ReadFromBms1Stream);
             Assert.IsNotNull(reply);
             (request.ApplicationVersion as VersionDotNet).AdditionaInfo = "None"; // the AdditionaInfo is not read from stream
@@ -99,7 +99,7 @@ namespace Remact.Net.Bms1UnitTest
 
             // Read and verify data ----------------------------------------
             _stream.Position = 0;
-            Assert.AreEqual(2, _serializer.ReadMessageStart(_stream));
+            Assert.AreEqual(2, _serializer.ReadMessageStart(_stream).BlockTypeId);
             var reply = _serializer.ReadMessage(IdentificationMessage.ReadFromBms1Stream);
             Assert.IsNotNull(reply);
             (request.ApplicationVersion as VersionPLC).AdditionaInfo = "None"; // the AdditionaInfo is not written to stream

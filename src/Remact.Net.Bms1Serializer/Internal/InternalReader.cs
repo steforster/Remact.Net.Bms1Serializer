@@ -66,9 +66,9 @@
 
 
         #region IBms1MessageReader Members
-        
-        // returns next message block type
-        public int ReadMessageStart(BinaryReader binaryReader)
+
+        // returns attributes of next message block
+        public IBms1InternalReader ReadMessageStart(BinaryReader binaryReader)
         {
             Stream = binaryReader;
             while (true)
@@ -86,7 +86,7 @@
                 {
                     if (ReadNextTag() && _tagReader.TagEnum == Bms1Tag.BlockStart)
                     {
-                        return _tagReader.BlockTypeId; // valid message- and block start
+                        return this; // valid message- and block start
                     }
                 }
             }// while
@@ -242,12 +242,12 @@
             get { return _tagReader.ObjectName; }
         }
 
-        public List<string> NameValueAttributes
+        public List<KeyValuePair<string, string>> KeyValueAttributes
         {
-            get { return _tagReader.NameValue; }
+            get { return _tagReader.KeyValue; }
         }
 
-        public List<string> NamespaceAttributes
+        public List<KeyValuePair<string, string>> NamespaceAttributes
         {
             get { return _tagReader.Namespace; }
         }

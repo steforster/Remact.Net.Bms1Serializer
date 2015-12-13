@@ -5,7 +5,7 @@ using System.Reflection;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Remact.Net.TcpStream")]
-[assembly: AssemblyDescription("Leightweight and efficient TCP network stream implementation.")]
+[assembly: AssemblyDescription("Efficient TCP network stream for asynchronous operation.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("steforster@github.com")]
 [assembly: AssemblyProduct("Remact.Net")]

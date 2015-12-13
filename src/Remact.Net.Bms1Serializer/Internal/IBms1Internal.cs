@@ -19,8 +19,8 @@
 
         string       ObjectType { get; }    // null = no type
         string       ObjectName { get; }    // null = no name
-        List<string> NameValueAttributes { get; }
-        List<string> NamespaceAttributes { get; }
+        List<KeyValuePair<string, string>> KeyValueAttributes { get; }
+        List<KeyValuePair<string, string>> NamespaceAttributes { get; }
 
         int     DataLength { get; } // length of following data in bytes, -2 = zero terminated, 0 = zero or empty array
         bool    IsArrayData { get; } // data is e.g. an array of bytes, ints...
@@ -37,8 +37,8 @@
 
     internal interface IMessageReader
     {
-        // returns next message block type
-        int ReadMessageStart(BinaryReader binaryReader);
+        // returns attributes of next message block
+        IBms1InternalReader ReadMessageStart(BinaryReader binaryReader);
 
         // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
         T ReadMessage<T>(IBms1Reader reader, Func<IBms1Reader, T> readMessageDto) where T : new();
