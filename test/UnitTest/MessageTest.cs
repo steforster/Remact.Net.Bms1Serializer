@@ -38,7 +38,7 @@ namespace Remact.Net.Bms1UnitTest
         {
             // Write data -------------------------------------
             var request = new IdleMessage();
-            _serializer.WriteMessage(_stream, request.WriteToBms1Stream);
+            _serializer.WriteMessageAsync(_stream, request.WriteToBms1Stream);
             AssertBytesWritten(10);
             
 
@@ -64,7 +64,7 @@ namespace Remact.Net.Bms1UnitTest
                 ApplicationVersion = new VersionDotNet { Version = new Version(1, 2, 3, 4), AdditionaInfo = "more written" }
             };
 
-            _serializer.WriteMessage(_stream, request.WriteToBms1Stream);
+            _serializer.WriteMessageAsync(_stream, request.WriteToBms1Stream);
             AssertBytesWritten(65);
 
 
@@ -93,7 +93,7 @@ namespace Remact.Net.Bms1UnitTest
                 ApplicationVersion = new VersionPLC { Version = "1.2.3.4", CpuType = CpuType.ArmCortexA5, AdditionaInfo = "more info" }
             };
 
-            _serializer.WriteMessage(_stream, request.WriteToBms1Stream);
+            _serializer.WriteMessageAsync(_stream, request.WriteToBms1Stream);
             AssertBytesWritten(56);
 
 

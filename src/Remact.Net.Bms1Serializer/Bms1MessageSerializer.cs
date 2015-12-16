@@ -3,7 +3,7 @@ namespace Remact.Net.Bms1Serializer
     using System;
     using System.IO;
     using System.Threading;
-
+    using System.Threading.Tasks;
     using Remact.Net.Bms1Serializer.Internal;
     
     public class Bms1MessageSerializer
@@ -52,7 +52,7 @@ namespace Remact.Net.Bms1Serializer
         }
 
                 
-        public void WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
+        public Task WriteMessageAsync(Stream stream, Action<IBms1Writer> writeDtoAction)
         {
             if (stream == null)
             {
@@ -73,6 +73,7 @@ namespace Remact.Net.Bms1Serializer
             }
 
             _messageWriter.WriteMessage(_writer, writeDtoAction);
+            return stream.FlushAsync(); // TODO cancellation token
         }
     }
 }

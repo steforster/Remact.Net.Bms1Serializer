@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 
 namespace Remact.Net.TcpStream
 {
+    using System.Threading;
+
     /// <summary>
     /// Implements a stream for serializing and asynchronously sending a message to a socket.
     /// The buffer expands up to the size of the largest message. The message is serialized without blocking.
@@ -13,7 +15,7 @@ namespace Remact.Net.TcpStream
     /// </summary>
     public class TcpStreamOutgoing : MemoryStream, IDisposable
     {
-        private Func<byte[], int, Task> _sendAsync;
+        private Func<byte[], int, CancellationToken, Task> _sendAsync;
 
         /// <summary>
         /// Initializes a writable stream. Sending to the socket must be implemented in the callback function sendAsync.
@@ -21,7 +23,7 @@ namespace Remact.Net.TcpStream
         /// <param name="sendAsync">FlushAsync calls back on 'sendAsync' with the internal byte buffer and the count of bytes to send as parameters. 
         /// 'sendAsync' must return a Task for the asynchronous processing.</param>
         /// <param name="initialBufferSize">Defines the initial write buffer capacity. The buffer expands up to the size of the largest message.</param>
-        public TcpStreamOutgoing(Func<byte[], int, Task> sendAsync, int initialBufferSize)
+        public TcpStreamOutgoing(Func<byte[], int, CancellationToken, Task> sendAsync, int initialBufferSize)
             : base(initialBufferSize)
         {
             if (sendAsync == null)
@@ -40,11 +42,11 @@ namespace Remact.Net.TcpStream
         /// <summary>
         /// After a message has been serialized into the underlying memory stream, FlushAsync must be called to copy it to the TCP socket.
         /// After the async send has completed, the stream property 'Position' must be set to 0. It may not be incremented in the meantime.
-        /// In .NET 4.0 FlushAsync is not available in the Stream base class. Therefore, we implement it as virtual.
         /// </summary>
-        public virtual Task FlushAsync()
+        //public virtual Task FlushAsync() //In .NET 4.0 FlushAsync is not available in the Stream base class. Therefore, we implement it as virtual.
+        public override Task FlushAsync(CancellationToken cancellationToken) // override in .Net 4.5
         {
-            return _sendAsync(GetBuffer(), /*count=*/(int)Position);
+            return _sendAsync(GetBuffer(), /*count=*/(int)Position, cancellationToken);
         }
 
         /// <summary>
@@ -56,8 +58,12 @@ namespace Remact.Net.TcpStream
         {
             try
             {
-                var task = _sendAsync(GetBuffer(), /*count=*/(int)Position);
-                task.Wait();
+                using (var cts = new CancellationTokenSource())
+                {
+                    cts.CancelAfter(1000);
+                    var task = _sendAsync(GetBuffer(), /*count=*/(int)Position, cts.Token);
+                    task.Wait(cts.Token);
+                }
             }
             finally
             {

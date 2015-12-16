@@ -79,7 +79,7 @@ namespace Remact.Net.TcpStream
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(nameof(TcpStreamClient));
+                throw new ObjectDisposedException("Remact.Net.TcpStream.TcpStreamClient"); // in VS2015: nameof(TcpStreamClient));
             }
             if (IsConnected)
             {
@@ -130,5 +130,18 @@ namespace Remact.Net.TcpStream
                 tcs.TrySetException(LatestException);
             }
         }
+
+        
+        #region IDisposable
+
+        private bool _disposed;
+
+        protected override void Dispose(bool disposing)
+        {
+            _disposed = true;
+            base.Dispose(disposing);
+        }
+
+        #endregion
     }
 }

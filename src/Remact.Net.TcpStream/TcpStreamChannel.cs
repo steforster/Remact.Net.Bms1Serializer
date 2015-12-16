@@ -6,6 +6,8 @@ using System.Net;
 
 namespace Remact.Net.TcpStream
 {
+    using System.Threading;
+
     /// <summary>
     /// TcpStreamChannel is used for incoming and outgoing message streams on client as well as on service side.
     /// The streams are optimized for serialization performance.
@@ -200,9 +202,10 @@ namespace Remact.Net.TcpStream
 
 
         // called from _tcpStreamOutgoing on user actor worker thread, when message has been serialized into buffer.
-        private Task SendAsync(byte[] messageBuffer, int count)
+        private Task SendAsync(byte[] messageBuffer, int count, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<bool>();
+            // TODO cancellaton, SeekOrigin http://stackoverflow.com/questions/23618634/how-do-you-catch-cancellationtoken-register-callback-exceptions
             try
             {
                 if (!_disposed)
@@ -290,7 +293,7 @@ namespace Remact.Net.TcpStream
 
         #region IDisposable
 
-        protected bool _disposed;
+        private bool _disposed;
 
         /// <summary>
         /// Shuts down the underlying socket. Disposes all reserved resources.
