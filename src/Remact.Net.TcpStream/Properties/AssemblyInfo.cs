@@ -1,5 +1,7 @@
-﻿using System.Resources;
+﻿using System;
+using System.Resources;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -26,3 +28,10 @@ using System.Reflection;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("0.1.0.0")]
 [assembly: AssemblyFileVersion("0.1.0.0")]
+
+
+// Setting ComVisible to false makes the types in this assembly not visible to COM components.
+[assembly: ComVisible(false)]
+
+// The assembly may be used from other CLS languages. Therefore, it is checked for compatiblity.
+[assembly: CLSCompliant(true)]
