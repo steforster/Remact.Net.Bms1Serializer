@@ -52,7 +52,7 @@ namespace Remact.Net.Bms1Serializer
         }
 
                 
-        public Task WriteMessageAsync(Stream stream, Action<IBms1Writer> writeDtoAction)
+        public Task WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
         {
             if (stream == null)
             {
