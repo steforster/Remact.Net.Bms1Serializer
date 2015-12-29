@@ -61,13 +61,12 @@ namespace Remact.Net.TcpStream
         /// <param name="tcpPort">The TCP port of the remote service.</param>
         public Task ConnectAsync(string hostOrIp, int tcpPort)
         {
-            IPAddress ipAddress;
-            if (!IPAddress.TryParse(hostOrIp, out ipAddress))
-            {
-                // TODO
-            }
+//            IPAddress ipAddress;
+//            if (!IPAddress.TryParse(hostOrIp, out ipAddress))
+//            {
+//            }
 
-            return ConnectAsync(new IPEndPoint(ipAddress, tcpPort));
+            return ConnectAsync(new DnsEndPoint(hostOrIp, tcpPort));
         }
 
         /// <summary>

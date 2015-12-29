@@ -3,8 +3,6 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>10.0.0</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{658FF815-D635-497E-BA72-F6A9D22692CE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>Remact.Net.Bms1Serializer</RootNamespace>
