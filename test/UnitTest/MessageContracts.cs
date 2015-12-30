@@ -13,7 +13,7 @@ namespace Remact.Net.Bms1UnitTest
 
         public static IdleMessage ReadFromBms1Stream(IBms1Reader reader)
         {
-            // ReadBlock calls us back, in case the serialized value is not null.
+            // ReadBlock calls us back, in case the deserialization method is not null.
             return reader.ReadBlock<IdleMessage>((dto) => new IdleMessage());
         }
 

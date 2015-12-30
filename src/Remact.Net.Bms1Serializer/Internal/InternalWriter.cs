@@ -71,14 +71,39 @@
 
             if (CollectionElementCount >= 0)
             {
-                WriteDataUInt((byte)Bms1Attribute.Collection, (UInt32)CollectionElementCount);
+                WriteTagAndUInt((byte)Bms1Attribute.Collection, (UInt32)CollectionElementCount);
                 CollectionElementCount = Bms1Length.None;
             }
 
-            //ObjectName = null;
-            //ObjectType = null;
-            //NameValueAttributes = null;
-            //NamespaceAttributes = null;
+            if (ObjectName != null)
+            {
+                WriteTagAndString((byte)Bms1Attribute.BlockName, ObjectName);
+                ObjectName = null;
+            }
+
+            if (ObjectType != null)
+            {
+                WriteTagAndString((byte)Bms1Attribute.BlockType, ObjectType);
+                ObjectType = null;
+            }
+
+            if (NameValueAttributes != null)
+            {
+                foreach (var item in NameValueAttributes)
+                {
+                    WriteTagAndString((byte)Bms1Attribute.NameValue, item);
+                }
+                NameValueAttributes = null;
+            }
+
+            if (NamespaceAttributes != null)
+            {
+                foreach (var item in NamespaceAttributes)
+                {
+                    WriteTagAndString((byte)Bms1Attribute.Namespace, item);
+                }
+                NamespaceAttributes = null;
+            }
         }
 
 
@@ -95,11 +120,6 @@
         {
             get; set;
         }
-
-        //public int BlockTypeId
-        //{
-        //    get; set;
-        //}
 
         public string ObjectType
         {
@@ -121,6 +141,24 @@
             get; set;
         }
 
+        public void AddValueAttribute(string name, string value)
+        {
+            if (NameValueAttributes == null)
+            {
+                NameValueAttributes = new List<string>();
+            }
+            NameValueAttributes.Add(string.Concat(name, '=', value));
+        }
+
+        public void AddNamespaceAttribute(string alias, string fullNamespace)
+        {
+            if (NamespaceAttributes == null)
+            {
+                NamespaceAttributes = new List<string>();
+            }
+            NamespaceAttributes.Add(string.Concat(alias, '=', fullNamespace));
+        }
+
         public void WriteAttributesAndTag(Bms1Tag tag)
         {
             WriteAttributes();
@@ -130,6 +168,11 @@
         public void WriteAttributesAndTag(Bms1Tag tag, int dataLength)
         {
             WriteAttributes();
+            WriteTagAndLength((byte)tag, dataLength);
+        }
+        
+        private void WriteTagAndLength(byte tag, int dataLength)
+        {
             if (dataLength >= 256)
             {
                 Stream.Write((byte)(tag + Bms1LengthSpec.Int32));
@@ -149,34 +192,27 @@
                 throw new Bms1Exception("undefined dataLength=" + dataLength);
             }
         }
-        
-        public void WriteDataString(Bms1Tag tag, string data)
+
+        private void WriteTagAndString(byte tag, string data)
         {
-            WriteAttributes();
             if (data == null)
             {
                 Stream.Write((byte)Bms1Tag.Null);
             }
             else if (data.Length == 0)
             {
-                Stream.Write((byte)tag);
+                Stream.Write(tag);
             }
             else
             {
                 byte[] buffer = Encoding.UTF8.GetBytes(data);
-                WriteAttributesAndTag(tag, buffer.Length);
+                WriteTagAndLength(tag, buffer.Length);
                 Stream.Write(buffer);
             }
         }
 
-        public void WriteDataUInt(Bms1Tag tag, UInt32 data)
+        private void WriteTagAndUInt(byte tag, UInt32 data)
         {
-            WriteDataUInt((byte)tag, data);
-        }
-
-        private void WriteDataUInt(byte tag, UInt32 data)
-        {
-            WriteAttributes();
             if (data == 0)
             {
                 Stream.Write((byte)tag);
@@ -198,15 +234,27 @@
             }
         }
 
+        public void WriteDataString(Bms1Tag tag, string data)
+        {
+            WriteAttributes();
+            WriteTagAndString((byte)tag, data);
+        }
+
+        public void WriteDataUInt(Bms1Tag tag, UInt32 data)
+        {
+            WriteAttributes();
+            WriteTagAndUInt((byte)tag, data);
+        }
+
         public void WriteDataUInt64(Bms1Tag tag, UInt64 data)
         {
+            WriteAttributes();
             if (data <= 0xFFFFFFFF)
             {
-                WriteDataUInt((byte)tag, (UInt32)data);
+                WriteTagAndUInt((byte)tag, (UInt32)data);
             }
             else
             {
-                WriteAttributes();
                 Stream.Write((byte)(tag + Bms1LengthSpec.L8));
                 Stream.Write(data);
             }

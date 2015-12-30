@@ -41,9 +41,9 @@
 
         public int CollectionElementBaseType; // -1 = no collection or no base type
 
-        public List<KeyValuePair<string, string>> KeyValue;
+        public List<string> NameValues;
 
-        public List<KeyValuePair<string, string>> Namespace;
+        public List<string> Namespaces;
 
         public int TagSetNumber;    // only last attribute is used, no combinations supported
 
@@ -56,8 +56,8 @@
             ObjectType = null;
             CollectionElementCount = Bms1Length.None; // -1
             CollectionElementBaseType = -1;
-            KeyValue = null;
-            Namespace = null;
+            NameValues = null;
+            Namespaces = null;
             TagSetNumber = 0;
             IsCharacterType = false;
         }
@@ -119,21 +119,19 @@
                         break;
 
                     case 190:
-                        if (KeyValue == null)
+                        if (NameValues == null)
                         {
-                            KeyValue = new List<KeyValuePair<string, string>>();
+                            NameValues = new List<string>();
                         }
-                        var kvPair = new KeyValuePair<string, string>(ReadDataString(stream), ReadDataString(stream));
-                        KeyValue.Add(kvPair);
+                        NameValues.Add(ReadDataString(stream));
                         break;
 
                     case 200:
-                        if (Namespace == null)
+                        if (Namespaces == null)
                         {
-                            Namespace = new List<KeyValuePair<string, string>>();
+                            Namespaces = new List<string>();
                         }
-                        var nsPair = new KeyValuePair<string, string>(ReadDataString(stream), ReadDataString(stream));
-                        Namespace.Add(nsPair);
+                        Namespaces.Add(ReadDataString(stream));
                         break;
 
                     case 230:

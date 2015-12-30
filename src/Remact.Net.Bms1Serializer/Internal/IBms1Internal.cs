@@ -17,10 +17,10 @@
         int     BlockTypeId  { get; } // -1 = no id
         int     BlockNestingLevel { get; } // 1 = base block, 0 = message
 
-        string       ObjectType { get; }    // null = no type
-        string       ObjectName { get; }    // null = no name
-        List<KeyValuePair<string, string>> KeyValueAttributes { get; }
-        List<KeyValuePair<string, string>> NamespaceAttributes { get; }
+        string  ObjectType { get; }    // null = no type
+        string  ObjectName { get; }    // null = no name
+        List<string> NameValueAttributes { get; } // "<name>=<value>"
+        List<string> NamespaceAttributes { get; } // "<alias>=<namespace>"
 
         int     DataLength { get; } // length of following data in bytes, -2 = zero terminated, 0 = zero or empty array
         bool    IsArrayData { get; } // data is e.g. an array of bytes, ints...
@@ -55,10 +55,13 @@
         bool IsCharacterType { get; set; }
         //int  BlockTypeId { get; set; } // -1 = no id
 
-        string       ObjectType { get; set; }    // null = no type
-        string       ObjectName { get; set; }    // null = no name
-        List<string> NameValueAttributes { get; set; }
-        List<string> NamespaceAttributes { get; set; }
+        string ObjectType { get; set; }    // null = no type
+        string ObjectName { get; set; }    // null = no name
+
+        List<string> NameValueAttributes { get; set; }  // "<name>=<value>"
+        List<string> NamespaceAttributes { get; set; }  // "<alias>=<namespace>"
+        void AddValueAttribute(string name, string value);
+        void AddNamespaceAttribute(string alias, string fullNamespace);
 
         void WriteAttributesAndTag(Bms1Tag tag); // Does not add a length specifier to the tag
         void WriteAttributesAndTag(Bms1Tag tag, int dataLength); // Adds length specifier and length according to data length: >= 256: writes 2 bytes data length / >= 0: writes 1 byte data length / -2 = zero terminated (no data length)

@@ -242,14 +242,14 @@
             get { return _tagReader.ObjectName; }
         }
 
-        public List<KeyValuePair<string, string>> KeyValueAttributes
+        public List<string> NameValueAttributes
         {
-            get { return _tagReader.KeyValue; }
+            get { return _tagReader.NameValues; }
         }
 
-        public List<KeyValuePair<string, string>> NamespaceAttributes
+        public List<string> NamespaceAttributes
         {
-            get { return _tagReader.Namespace; }
+            get { return _tagReader.Namespaces; }
         }
 
         public bool EndOfMessage
