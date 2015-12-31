@@ -31,9 +31,9 @@ namespace Remact.Net.TcpStream
         /// <param name="onDataReceived">The action is called back (on a threadpool thread), when a message start is received.</param>
         /// <param name="onChannelDisconnected">The action is called back (on a threadpool thread), when the channel is disconnected from remote. May be null.</param>
         /// <param name="bufferSize">Defines size of the receive buffer and minimum size of the send buffer. Default = 1500 bytes (one ethernet frame).</param>
-        public Task ConnectAsync(Uri uri, Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize = 1500)
+        public async Task ConnectAsync(Uri uri, Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize = 1500)
         {
-            return ConnectAsync(uri.Host, uri.Port, onDataReceived, onChannelDisconnected, bufferSize);
+            await ConnectAsync(uri.Host, uri.Port, onDataReceived, onChannelDisconnected, bufferSize);
         }
 
         /// <summary>
@@ -43,14 +43,10 @@ namespace Remact.Net.TcpStream
         /// <param name="onDataReceived">The action is called back (on a threadpool thread), when a message start is received.</param>
         /// <param name="onChannelDisconnected">The action is called back (on a threadpool thread), when the channel is disconnected from remote. May be null.</param>
         /// <param name="bufferSize">Defines size of the receive buffer and minimum size of the send buffer. Default = 1500 bytes (one ethernet frame).</param>
-        public Task ConnectAsync(string hostOrIp, int tcpPort, Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize=1500)
+        public async Task ConnectAsync(string hostOrIp, int tcpPort, Action<TcpStreamChannel> onDataReceived, Action<TcpStreamChannel> onChannelDisconnected = null, int bufferSize=1500)
         {
-            var task = ConnectAsync(hostOrIp, tcpPort);
-            return task.ContinueWith(delegate(Task t)
-                {
-                    Start(onDataReceived, onChannelDisconnected, bufferSize);
-                    return t;
-                });
+            await ConnectAsync(hostOrIp, tcpPort);
+            Start(onDataReceived, onChannelDisconnected, bufferSize);
         }
 
         /// <summary>
@@ -59,14 +55,14 @@ namespace Remact.Net.TcpStream
         /// </summary>
         /// <param name="hostOrIp">The host name or ip address of the remote service.</param>
         /// <param name="tcpPort">The TCP port of the remote service.</param>
-        public Task ConnectAsync(string hostOrIp, int tcpPort)
+        public async Task ConnectAsync(string hostOrIp, int tcpPort)
         {
 //            IPAddress ipAddress;
 //            if (!IPAddress.TryParse(hostOrIp, out ipAddress))
 //            {
 //            }
 
-            return ConnectAsync(new DnsEndPoint(hostOrIp, tcpPort));
+            await ConnectAsync(new DnsEndPoint(hostOrIp, tcpPort));
         }
 
         /// <summary>
@@ -74,7 +70,7 @@ namespace Remact.Net.TcpStream
         /// After ConnectAsync has executed successfully, the <see cref="TcpStreamChannel.Start" /> method must be called.
         /// </summary>
         /// <param name="remoteEndpoint">The endpoint address of the remote service.</param>
-        public Task ConnectAsync(EndPoint remoteEndpoint)
+        public async Task ConnectAsync(EndPoint remoteEndpoint)
         {
             if (_disposed)
             {
@@ -98,7 +94,7 @@ namespace Remact.Net.TcpStream
             {
                 OnClientConnected(null, _receiveEventArgs);
             }
-            return task;
+            await task;
         }
 
 

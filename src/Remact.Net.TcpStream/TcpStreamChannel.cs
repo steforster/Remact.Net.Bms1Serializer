@@ -89,7 +89,10 @@ namespace Remact.Net.TcpStream
             _sendEventArgs.Completed += OnDataSent;
             _tcpStreamOutgoing = new TcpStreamOutgoing(SendAsync, _bufferSize);
 
-            StartAsyncRead();
+            if (!StartAsyncRead() && LatestException != null)
+            {
+                throw LatestException;
+            }
         }
 
         /// <summary>
