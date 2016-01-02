@@ -196,13 +196,20 @@ namespace Remact.Net.Bms1UnitTest
         /// </summary>
         public static void WriteToBms1Stream(this Version version, IBms1Writer writer)
         {
-            writer.WriteBlock(() =>
-                {
-                    writer.WriteInt32(version.Major);
-                    writer.WriteInt32(version.Minor);
-                    writer.WriteInt32(version.Build);
-                    writer.WriteInt32(version.Revision);
-                });
+            if (version == null)
+            {
+                writer.WriteBlock(null);
+            }
+            else
+            {
+                writer.WriteBlock(() =>
+                    {
+                        writer.WriteInt32(version.Major);
+                        writer.WriteInt32(version.Minor);
+                        writer.WriteInt32(version.Build);
+                        writer.WriteInt32(version.Revision);
+                    });
+            }
         }
     }
 }

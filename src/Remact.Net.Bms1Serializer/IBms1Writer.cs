@@ -8,7 +8,7 @@
     {
         IBms1InternalWriter Internal { get; }
 
-        void WriteBlock(UInt16 blockTypeId, Action writeDtoAction); // writeDto==null writes null
+        void WriteBlock(UInt16 blockTypeId, Action writeDtoAction); // writeDtoAction==null writes null
         void WriteBlock(Action writeDtoAction); // no ID; writeDto==null writes null
         //void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId);
 
