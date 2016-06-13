@@ -2,10 +2,12 @@ namespace Remact.Net.Bms1Serializer
 {
     using System;
     using System.IO;
-    using System.Threading;
     using System.Threading.Tasks;
     using Remact.Net.Bms1Serializer.Internal;
     
+    /// <summary>
+    /// Main class to serialize or dezerialize a BMS message stream.
+    /// </summary>
     public class Bms1MessageSerializer
     {
         private Stream _readStream;
@@ -16,7 +18,11 @@ namespace Remact.Net.Bms1Serializer
         private Bms1Writer _writer;
         private IMessageWriter _messageWriter;
         
-        // returns attributes of the next message block
+        /// <summary>
+        /// Reads until a message start is found. See e.g. <see cref="IBms1InternalReader.ObjectType"/> for the incoming message type.
+        /// </summary>
+        /// <param name="stream">A Remact.Net.Tcp.Stream or another stream to read the message from.</param>
+        /// <returns>Attributes of the incoming message.</returns>
         public IBms1InternalReader ReadMessageStart(Stream stream)
         {
             if (stream == null)
@@ -40,7 +46,13 @@ namespace Remact.Net.Bms1Serializer
             return _messageReader.ReadMessageStart(_reader.Stream);
         }
 
-        // returns null (default(T)), when not read because: readMessageDto==null (message is skipped)
+        /// <summary>
+        /// Read the message after <see cref="ReadMessageStart"/> has been called.
+        /// Skips all message data and returns null, when null is passed as readMessageDto.
+        /// </summary>
+        /// <typeparam name="T">The message type.</typeparam>
+        /// <param name="readMessageDto">A function that deserializes a message of (base) type T.</param>
+        /// <returns>The message of (base) Type T.</returns>
         public T ReadMessage<T>(Func<IBms1Reader, T> readMessageDto) where T : new()
         {
             if (_reader == null)
@@ -51,7 +63,14 @@ namespace Remact.Net.Bms1Serializer
             return _messageReader.ReadMessage<T>(_reader, readMessageDto);
         }
 
-                
+        
+        /// <summary>
+        /// Writes a message to the stream.
+        /// </summary>
+        /// <param name="stream">A Remact.Net.Tcp.Stream or another stream to write the message to.</param>
+        /// <param name="writeDtoAction">A lambda expression that serializes a message of type T.</param>
+        /// <returns>A task that completes after the message has been written and the stream is flushed.</returns>
+                      
         public Task WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
         {
             if (stream == null)

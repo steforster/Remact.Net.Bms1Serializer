@@ -15,7 +15,7 @@
         }
 
         // returns false, when EndOfBlock or EndOfMessage == true after reading next tag
-        private bool ReadNextTag()
+        public bool ReadNextTag()
         {
             _tagReader.ClearAttributes();
             while (_tagReader.TagEnum == Bms1Tag.Attribute)
@@ -113,12 +113,12 @@
         }
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        public T ReadBlock<T>(Func<T,T> readDto) where T : new()
+        public T ReadBlock<T>(Func<T> readDto)
         {
-            T dto = default(T); // null, when object
+            T dto = default(T);
             if (EndOfBlock)
             {
-                return dto;
+                return dto; // null, when object
             }
 
             var thisBlockLevel = BlockNestingLevel;
@@ -128,7 +128,7 @@
                 if (_tagReader.TagEnum == Bms1Tag.Null)
                 {
                     ReadNextTag(); // get attributes of next value
-                    return dto; // null or default
+                    return dto; // null, when object
                 }
 
                 if (_tagReader.TagEnum != Bms1Tag.BlockStart)
@@ -139,7 +139,7 @@
 
                 if (readDto != null)
                 {
-                    dto = readDto(new T()); // create a default DTO and call the user code to deserialize the data transfer object
+                    dto = readDto(); // call the user code to create and deserialize the data transfer object
                 }
             }
             finally

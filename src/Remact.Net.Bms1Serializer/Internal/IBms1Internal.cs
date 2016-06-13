@@ -26,6 +26,9 @@
         bool    IsArrayData { get; } // data is e.g. an array of bytes, ints...
 
         void    ReadAttributes(); // Reads attributes for next value. Does not read over end of block. 
+                
+        bool    ReadNextTag(); // also reads attributes. returns false, when EndOfBlock or EndOfMessage == true after reading next tag
+
         void    SkipData();
 
         // Does not read attribute and tag, reads over end of block.
@@ -44,7 +47,7 @@
         T ReadMessage<T>(IBms1Reader reader, Func<IBms1Reader, T> readMessageDto) where T : new();
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        T ReadBlock<T>(Func<T, T> readDto) where T : new();
+        T ReadBlock<T>(Func<T> readDto);
     }
     
     

@@ -40,7 +40,7 @@
 
 
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
-        public T ReadBlock<T>(Func<T, T> readDto) where T : new()
+        public T ReadBlock<T>(Func<T> readDto)
         {
             if (Internal.IsCollection)
             {
@@ -51,7 +51,7 @@
         }
 
 
-        public List<T> ReadBlocks<T>(Func<IBms1InternalReader, T> blockFactory) where T : new()
+        public List<T> ReadBlocks<T>(Func<IBms1Reader, T> blockFactory)
         {
             if (blockFactory == null)
             {
@@ -73,7 +73,7 @@
             var readCount = 0;
             while (Internal.TagEnum == Bms1Tag.BlockStart && readCount < count)
             {
-                var blockDto = blockFactory(Internal);
+                var blockDto = blockFactory(this);
                 list.Add(blockDto);
                 readCount++;
             }
@@ -532,12 +532,12 @@
                         data = new List<string>();
                     }
 
-                    Internal.ReadAttributes(); // skip blockstart
+                    Internal.ReadNextTag(); // skip blockstart
                     while (!Internal.EndOfBlock)
                     {
                         data.Add(ReadString());
                     }
-                    Internal.ReadAttributes(); // skip blockend
+                    Internal.ReadNextTag(); // skip blockend
 
                     if (predefinedCount >= 0 && data.Count != predefinedCount)
                     {

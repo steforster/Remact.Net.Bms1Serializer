@@ -14,7 +14,7 @@ namespace Remact.Net.Bms1UnitTest
         public static IdleMessage ReadFromBms1Stream(IBms1Reader reader)
         {
             // ReadBlock calls us back, in case the deserialization method is not null.
-            return reader.ReadBlock<IdleMessage>((dto) => new IdleMessage());
+            return reader.ReadBlock<IdleMessage>(() => new IdleMessage());
         }
 
         public void WriteToBms1Stream(IBms1Writer writer)
@@ -40,17 +40,14 @@ namespace Remact.Net.Bms1UnitTest
         
         public static IdentificationMessage ReadFromBms1Stream(IBms1Reader reader)
         {
-            return reader.ReadBlock<IdentificationMessage>(
-                (dto) =>
-                {
-                    dto.InterfaceName = reader.ReadString();
-                    dto.InterfaceVersion = reader.ReadInt16();
-                    dto.ApplicationName = reader.ReadString();
-
-                    dto.ApplicationVersion = VersionBase.ReadFromBms1Stream(reader);
-
-                    dto.ApplicationInstance = reader.ReadString();
-                    return dto;
+            return reader.ReadBlock(
+                () => new IdentificationMessage()
+                { 
+                    InterfaceName = reader.ReadString(),
+                    InterfaceVersion = reader.ReadInt16(),
+                    ApplicationName = reader.ReadString(),
+                    ApplicationVersion = VersionBase.ReadFromBms1Stream(reader),
+                    ApplicationInstance = reader.ReadString(),
                 });
         }
 
@@ -108,9 +105,9 @@ namespace Remact.Net.Bms1UnitTest
 
         internal static VersionPLC CreateFromBms1Stream(IBms1Reader reader)
         {
-            return reader.ReadBlock<VersionPLC>(
-                (dto) =>
+            return reader.ReadBlock(()=>
                 {
+                    var dto = new VersionPLC();
                     dto.Version = reader.ReadString();
                     dto.CpuType = reader.ReadEnum<CpuType>();
                     if (!reader.Internal.EndOfBlock)
@@ -155,12 +152,11 @@ namespace Remact.Net.Bms1UnitTest
 
         internal static VersionDotNet CreateFromBms1Stream(IBms1Reader reader)
         {
-            return reader.ReadBlock<VersionDotNet>(
-                (dto) =>
+            return reader.ReadBlock(
+                () => new VersionDotNet()
                 {
-                    dto.Version = MessageExtensions.ReadFromBms1Stream(null, reader);
+                    Version = MessageExtensions.ReadFromBms1Stream(null, reader),
                     // Intentionally, we do not read AdditionalInfo. This simulates a new sender and an older receiver;
-                    return dto;
                 });
         }
 
@@ -183,11 +179,8 @@ namespace Remact.Net.Bms1UnitTest
         /// </summary>
         public static Version ReadFromBms1Stream(this Version version, IBms1Reader reader)
         {
-            return reader.ReadBlock<Version>(
-                (dto) =>
-                {
-                    return new Version(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-                });
+            return reader.ReadBlock(
+                () => new Version(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()));
         }
 
         /// <summary>
