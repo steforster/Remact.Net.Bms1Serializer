@@ -1,9 +1,4 @@
 
-TODO in Spec.:
--248		NullBlock unused ?
--Strings: inside Block
-
-
 TODO in Code:
 - Max Array
 
