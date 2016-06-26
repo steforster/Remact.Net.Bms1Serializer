@@ -19,26 +19,6 @@
             _messageReader = messageReader;
         }
 
-        // returns false, when not read because: EndOfBlock, EndOfMessage, blockDto==null (block is skipped)
-        //public bool ReadBlock(IBms1Dto blockDto)
-        //{
-        //    if (Internal.EndOfBlock)
-        //    {
-        //        return false;
-        //    }
-
-        //    if (Internal.IsBlockType && !Internal.IsCollection)
-        //    {
-        //        if (blockDto != null)
-        //        {
-        //            return _messageReader.ReadBlock(() => blockDto.ReadFromBms1Stream(this));
-        //        }
-        //        return _messageReader.ReadBlock(null); // skip unknown block type
-        //    }
-        //    throw Internal.Bms1Exception("cannot read block");
-        //}
-
-
         // returns null (default(T)), when not read because: EndOfBlock, EndOfMessage, readDto==null (block is skipped)
         public T ReadBlock<T>(Func<T> readDto)
         {
@@ -58,29 +38,29 @@
                 throw new ArgumentNullException("blockFactory");
             }
             
-            int count = Internal.CollectionElementCount; // -1 = no collection attribute
+            int predefinedCount = Internal.CollectionElementCount; // -1 = no collection attribute
             List<T> list;
 
-            if (count > 0)
+            if (predefinedCount > 0)
             {
-                list = new List<T>(count);
+                list = new List<T>(predefinedCount);
             }
             else
             {
                 list = new List<T>();
             }
 
-            var readCount = 0;
-            while (Internal.TagEnum == Bms1Tag.BlockStart && readCount < count)
+            Internal.ReadNextTag(); // skip blockstart
+            while (!Internal.EndOfBlock)
             {
                 var blockDto = blockFactory(this);
                 list.Add(blockDto);
-                readCount++;
             }
+            Internal.ReadNextTag(); // skip blockend
 
-            if (readCount < count)
+            if (predefinedCount >= 0 && list.Count != predefinedCount)
             {
-                throw Internal.Bms1Exception("cannot read block collection");
+                throw Internal.Bms1Exception("expected List<" +typeof(T).Name + ">.Count = " + predefinedCount+", received = " + list.Count);
             }
             return list;
         }

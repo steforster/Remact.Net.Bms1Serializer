@@ -43,7 +43,6 @@ namespace Remact.Net.TcpStream
         /// After a message has been serialized into the underlying memory stream, FlushAsync must be called to copy it to the TCP socket.
         /// After the async send has completed, the stream property 'Position' must be set to 0. It may not be incremented in the meantime.
         /// </summary>
-        //public virtual Task FlushAsync() //In .NET 4.0 FlushAsync is not available in the Stream base class. Therefore, we implement it as virtual.
         public override Task FlushAsync(CancellationToken cancellationToken) // override in .Net 4.5
         {
             return _sendAsync(GetBuffer(), /*count=*/(int)Position, cancellationToken);

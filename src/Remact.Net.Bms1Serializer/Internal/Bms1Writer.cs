@@ -51,25 +51,24 @@
             }
         }
 
-        //public void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId)
-        //{
-        //    if (data == null)
-        //    {
-        //        WriteNull();
-        //    }
-        //    else
-        //    {
-        //        Internal.CollectionElementCount = data.Count;
-        //        _messageWriter.WriteBlock(Stream, baseBlockTypeId,
-        //            () =>
-        //            {
-        //                foreach (var b in data)
-        //                {
-        //                    WriteBlock(b);
-        //                }
-        //            });
-        //    }
-        //}
+        public void WriteBlocks<T>(UInt16 baseBlockTypeId, IEnumerable<T> data, Action<object, IBms1Writer> writeBlockAction)
+        {
+            if (data == null)
+            {
+                WriteNull();
+            }
+            else
+            {
+                Internal.CollectionElementCount = data.Count();
+                _messageWriter.WriteBlock(this, baseBlockTypeId, () =>
+                    {
+                        foreach (T block in data)
+                        {
+                            writeBlockAction((object)block, this);
+                        }
+                    });
+            }
+        }
 
         //------------------------------
         public void WriteBool(bool data)

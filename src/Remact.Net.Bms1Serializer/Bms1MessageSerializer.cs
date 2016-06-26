@@ -65,13 +65,34 @@ namespace Remact.Net.Bms1Serializer
 
         
         /// <summary>
+        /// Writes a message to the stream. Blocks until message has been serialized and flushed to the output stream.
+        /// </summary>
+        /// <param name="stream">A Remact.Net.Tcp.Stream or another stream to write the message to.</param>
+        /// <param name="writeDtoAction">A lambda expression that serializes a message of type T.</param>
+                     
+        public void WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
+        {
+            CheckStream (stream);
+            _messageWriter.WriteMessage(_writer, writeDtoAction);
+            stream.Flush(); // TODO cancellation token
+        }
+
+        
+        /// <summary>
         /// Writes a message to the stream.
         /// </summary>
         /// <param name="stream">A Remact.Net.Tcp.Stream or another stream to write the message to.</param>
         /// <param name="writeDtoAction">A lambda expression that serializes a message of type T.</param>
-        /// <returns>A task that completes after the message has been written and the stream is flushed.</returns>
+        /// <returns>A task that completes after the message has been flushed to the output stream.</returns>
                       
-        public Task WriteMessage(Stream stream, Action<IBms1Writer> writeDtoAction)
+        public async Task WriteMessageAsync(Stream stream, Action<IBms1Writer> writeDtoAction)
+        {
+            CheckStream (stream);
+            _messageWriter.WriteMessage(_writer, writeDtoAction);
+            await stream.FlushAsync(); // TODO cancellation token
+        }
+
+        private void CheckStream(Stream stream)
         {
             if (stream == null)
             {
@@ -90,9 +111,6 @@ namespace Remact.Net.Bms1Serializer
                 _writeStream = stream;
                 _writer.Stream = new System.IO.BinaryWriter(_writeStream);
             }
-
-            _messageWriter.WriteMessage(_writer, writeDtoAction);
-            return stream.FlushAsync(); // TODO cancellation token
         }
     }
 }

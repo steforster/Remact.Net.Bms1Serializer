@@ -33,6 +33,8 @@
         /// <returns>A list of objects.</returns>
         List<T> ReadBlocks<T>(Func<IBms1Reader, T> blockFactory);
 
+        // TODO: ReadObject(); the objects supported by BMS natively
+
         /// <summary>
         /// Reads a boolean value (when <see cref="IBms1InternalReader.EndOfBlock" is false)./>
         /// </summary>

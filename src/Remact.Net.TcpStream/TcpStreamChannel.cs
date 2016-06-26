@@ -156,8 +156,6 @@ namespace Remact.Net.TcpStream
 
         // OnDataReceived is asynchronously called on a threadpool thread. Sending is on another thread.
         // Only one ReceiveEventArgs exist for one stream. Therefore, no concurrency while receiving.
-        // At least under Mono 2.10.8 there is a threading issue (multi core ?) that can be prevented,
-        // when we thread-lock access to the ReceiveAsync method.
         private void OnDataReceived(object sender, SocketAsyncEventArgs e)
         {
             try

@@ -27,7 +27,16 @@
         /// <param name="writeDtoAction">The lambda expression to write the fields of an object in order.</param>
         void WriteBlock(Action writeDtoAction);
 
-        //void WriteBlocks(IList<IBms1Dto> data, UInt16 baseBlockTypeId);
+        /// <summary>
+        /// Write an enumerable of blocks. Writes null when data or writeBlockAction is null. 
+        /// </summary>
+        /// <typeparam name="T">The base block type.</typeparam>
+        /// <param name="baseBlockTypeId">The block ID of the base block.</param>
+        /// <param name="data">The enumerable of blocks.</param>
+        /// <param name="writeBlockAction">The action th write this type of base block.</param>
+        void WriteBlocks<T>(UInt16 baseBlockTypeId, IEnumerable<T> data, Action<object, IBms1Writer> writeBlockAction);
+
+        // TODO: WriteObject(); the objects supported by BMS natively
 
         /// <summary>
         /// Writes a boolean value.
